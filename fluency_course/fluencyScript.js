@@ -84995,119 +84995,119 @@ const DATA = {
 
 // ====================== 
 
-    /* ================= STATE ================= */
-    let currentCategory = "pronoun";
-    let bookmarks = {};
-    let quizPool = [];
-    let quizIndex = 0;
-    let selectedVoice = null;
-    let currentLevelFilter = 'all';
-    let bookmarkFilterActive = false;
-    let currentSubtopicFilter = 'all';
-    let openSections = new Set(); // sections default COLLAPSED; membership here means user opened it
+/* ================= STATE ================= */
+let currentCategory = "pronoun";
+let bookmarks = {};
+let quizPool = [];
+let quizIndex = 0;
+let selectedVoice = null;
+let currentLevelFilter = 'all';
+let bookmarkFilterActive = false;
+let currentSubtopicFilter = 'all';
+let openSections = new Set(); // sections default COLLAPSED; membership here means user opened it
 
-    /* ================= STORAGE (persistent, no localStorage) ================= */
-    async function loadPrefs() {
-      try {
-        const theme = await window.storage.get('pref:theme');
-        if (theme) document.body.setAttribute('data-theme', theme.value);
-      } catch (e) { }
-      try {
-        const lang = await window.storage.get('pref:lang');
-        if (lang) document.documentElement.setAttribute('data-lang', lang.value);
-      } catch (e) { }
-      try {
-        const bm = await window.storage.get('bookmarks');
-        if (bm) bookmarks = JSON.parse(bm.value);
-      } catch (e) { bookmarks = {}; }
-      try {
-        const sp = await window.storage.get('pref:speed');
-        if (sp && SPEED_RATES[sp.value]) {
-          audioSpeed = sp.value;
-          document.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b.dataset.speed === audioSpeed));
-        }
-      } catch (e) { }
+/* ================= STORAGE (persistent, no localStorage) ================= */
+async function loadPrefs() {
+  try {
+    const theme = await window.storage.get('pref:theme');
+    if (theme) document.body.setAttribute('data-theme', theme.value);
+  } catch (e) { }
+  try {
+    const lang = await window.storage.get('pref:lang');
+    if (lang) document.documentElement.setAttribute('data-lang', lang.value);
+  } catch (e) { }
+  try {
+    const bm = await window.storage.get('bookmarks');
+    if (bm) bookmarks = JSON.parse(bm.value);
+  } catch (e) { bookmarks = {}; }
+  try {
+    const sp = await window.storage.get('pref:speed');
+    if (sp && SPEED_RATES[sp.value]) {
+      audioSpeed = sp.value;
+      document.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b.dataset.speed === audioSpeed));
     }
-    async function saveTheme(v) { try { await window.storage.set('pref:theme', v); } catch (e) { } }
-    async function saveLang(v) { try { await window.storage.set('pref:lang', v); } catch (e) { } }
-    async function saveBookmarks() { try { await window.storage.set('bookmarks', JSON.stringify(bookmarks)); } catch (e) { } }
+  } catch (e) { }
+}
+async function saveTheme(v) { try { await window.storage.set('pref:theme', v); } catch (e) { } }
+async function saveLang(v) { try { await window.storage.set('pref:lang', v); } catch (e) { } }
+async function saveBookmarks() { try { await window.storage.set('bookmarks', JSON.stringify(bookmarks)); } catch (e) { } }
 
-    /* ================= TONE COLOR ================= */
-    function toneColorPinyin(py) {
-      const map = {
-        'ā': 't1', 'á': 't2', 'ǎ': 't3', 'à': 't4', 'ē': 't1', 'é': 't2', 'ě': 't3', 'è': 't4',
-        'ī': 't1', 'í': 't2', 'ǐ': 't3', 'ì': 't4', 'ō': 't1', 'ó': 't2', 'ǒ': 't3', 'ò': 't4',
-        'ū': 't1', 'ú': 't2', 'ǔ': 't3', 'ù': 't4', 'ǖ': 't1', 'ǘ': 't2', 'ǚ': 't3', 'ǜ': 't4'
-      };
-      return py.split(' ').map(syll => {
-        let cls = 't0';
-        for (const ch of syll) { if (map[ch]) { cls = map[ch]; break; } }
-        return `<span style="color:var(--${cls})">${syll}</span>`;
-      }).join(' ');
-    }
+/* ================= TONE COLOR ================= */
+function toneColorPinyin(py) {
+  const map = {
+    'ā': 't1', 'á': 't2', 'ǎ': 't3', 'à': 't4', 'ē': 't1', 'é': 't2', 'ě': 't3', 'è': 't4',
+    'ī': 't1', 'í': 't2', 'ǐ': 't3', 'ì': 't4', 'ō': 't1', 'ó': 't2', 'ǒ': 't3', 'ò': 't4',
+    'ū': 't1', 'ú': 't2', 'ǔ': 't3', 'ù': 't4', 'ǖ': 't1', 'ǘ': 't2', 'ǚ': 't3', 'ǜ': 't4'
+  };
+  return py.split(' ').map(syll => {
+    let cls = 't0';
+    for (const ch of syll) { if (map[ch]) { cls = map[ch]; break; } }
+    return `<span style="color:var(--${cls})">${syll}</span>`;
+  }).join(' ');
+}
 
-    /* ================= RENDER SIDEBAR ================= */
-    function renderSidebar() {
-      const nav = document.getElementById('sidebar');
-      nav.innerHTML = '';
-      Object.keys(DATA).forEach(key => {
-        const cat = DATA[key];
-        const btn = document.createElement('button');
-        btn.className = 'cat-btn' + (key === currentCategory ? ' active' : '');
-        btn.innerHTML = `<span>${cat.icon} <span data-lang-el="bn">${cat.label.bn}</span><span data-lang-el="en">${cat.label.en}</span></span><span class="count">${cat.items.length}</span>`;
-        btn.onclick = () => { currentCategory = key; currentLevelFilter = 'all'; currentSubtopicFilter = 'all'; bookmarkFilterActive = false; document.getElementById('searchInput').value = ''; renderSidebar(); renderCards(); closeSidebarMobile(); };
-        nav.appendChild(btn);
-      });
-    }
+/* ================= RENDER SIDEBAR ================= */
+function renderSidebar() {
+  const nav = document.getElementById('sidebar');
+  nav.innerHTML = '';
+  Object.keys(DATA).forEach(key => {
+    const cat = DATA[key];
+    const btn = document.createElement('button');
+    btn.className = 'cat-btn' + (key === currentCategory ? ' active' : '');
+    btn.innerHTML = `<span>${cat.icon} <span data-lang-el="bn">${cat.label.bn}</span><span data-lang-el="en">${cat.label.en}</span></span><span class="count">${cat.items.length}</span>`;
+    btn.onclick = () => { currentCategory = key; currentLevelFilter = 'all'; currentSubtopicFilter = 'all'; bookmarkFilterActive = false; document.getElementById('searchInput').value = ''; renderSidebar(); renderCards(); closeSidebarMobile(); };
+    nav.appendChild(btn);
+  });
+}
 
-    /* ================= LEVEL METADATA ================= */
-    function parseLevel(levelStr) {
-      // "Level 2 - Survival Spoken Chinese" -> {short:"Level 2", subtitle:"Survival Spoken Chinese", num:2}
-      const m = levelStr.match(/Level\s*(\d+)\s*-\s*(.+)/);
-      if (m) return { short: `Level ${m[1]}`, subtitle: m[2].trim(), num: parseInt(m[1]) };
-      return { short: levelStr, subtitle: '', num: 0 };
-    }
-    const LEVEL_EMOJI = { 1: '🟢', 2: '🔵', 3: '🟡', 4: '🟠', 5: '🔴' };
+/* ================= LEVEL METADATA ================= */
+function parseLevel(levelStr) {
+  // "Level 2 - Survival Spoken Chinese" -> {short:"Level 2", subtitle:"Survival Spoken Chinese", num:2}
+  const m = levelStr.match(/Level\s*(\d+)\s*-\s*(.+)/);
+  if (m) return { short: `Level ${m[1]}`, subtitle: m[2].trim(), num: parseInt(m[1]) };
+  return { short: levelStr, subtitle: '', num: 0 };
+}
+const LEVEL_EMOJI = { 1: '🟢', 2: '🔵', 3: '🟡', 4: '🟠', 5: '🔴' };
 
-    function diffClass(d) {
-      if (d <= 1) return 'd-easy';
-      if (d <= 3) return 'd-medium';
-      return 'd-hard';
-    }
+function diffClass(d) {
+  if (d <= 1) return 'd-easy';
+  if (d <= 3) return 'd-medium';
+  return 'd-hard';
+}
 
-    function getUid(item) {
-      return item.itemId || item.zh;
-    }
-    function diffLabel(d) {
-      const n = d || 1;
-      if (n <= 1) return { cls: 'd-easy', bn: 'সহজ', en: 'Easy' };
-      if (n <= 3) return { cls: 'd-medium', bn: 'মাঝারি', en: 'Medium' };
-      return { cls: 'd-hard', bn: 'কঠিন', en: 'Hard' };
-    }
-    function levelBadgeHtml(item) {
-      if (!item.level) return '';
-      const p = parseLevel(item.level);
-      const emoji = LEVEL_EMOJI[p.num] || '⚪';
-      return `<span class="level-badge">${emoji} ${p.short}</span>`;
-    }
+function getUid(item) {
+  return item.itemId || item.zh;
+}
+function diffLabel(d) {
+  const n = d || 1;
+  if (n <= 1) return { cls: 'd-easy', bn: 'সহজ', en: 'Easy' };
+  if (n <= 3) return { cls: 'd-medium', bn: 'মাঝারি', en: 'Medium' };
+  return { cls: 'd-hard', bn: 'কঠিন', en: 'Hard' };
+}
+function levelBadgeHtml(item) {
+  if (!item.level) return '';
+  const p = parseLevel(item.level);
+  const emoji = LEVEL_EMOJI[p.num] || '⚪';
+  return `<span class="level-badge">${emoji} ${p.short}</span>`;
+}
 
-    function buildCardElement(item) {
-      const card = document.createElement('div');
-      const isBm = bookmarks[getUid(item)];
-      const isRich = item.usage !== undefined || item.type !== undefined;
-      const stars = '⭐'.repeat(item.freq || 1);
-      const lvlBadge = levelBadgeHtml(item);
+function buildCardElement(item) {
+  const card = document.createElement('div');
+  const isBm = bookmarks[getUid(item)];
+  const isRich = item.usage !== undefined || item.type !== undefined;
+  const stars = '⭐'.repeat(item.freq || 1);
+  const lvlBadge = levelBadgeHtml(item);
 
-      /* ============ RICH SCHEMA CARD (Verb/Adjective new structure) ============ */
-      if (isRich) {
-        card.className = 'card';
-        const typeClass = item.type === 'Verb' ? 'tb-verb' : (item.type === 'Adjective' ? 'tb-adjective' : 'tb-other');
-        const df = diffLabel(item.difficulty);
+  /* ============ RICH SCHEMA CARD (Verb/Adjective new structure) ============ */
+  if (isRich) {
+    card.className = 'card';
+    const typeClass = item.type === 'Verb' ? 'tb-verb' : (item.type === 'Adjective' ? 'tb-adjective' : 'tb-other');
+    const df = diffLabel(item.difficulty);
 
-        let usageHtml = '';
-        if (item.usage && item.usage.length) {
-          usageHtml = `<div class="rc-section-title"><span data-lang-el="bn">ব্যবহার (Usage)</span><span data-lang-el="en">Usage</span></div>` +
-            item.usage.map((u, idx) => `
+    let usageHtml = '';
+    if (item.usage && item.usage.length) {
+      usageHtml = `<div class="rc-section-title"><span data-lang-el="bn">ব্যবহার (Usage)</span><span data-lang-el="en">Usage</span></div>` +
+        item.usage.map((u, idx) => `
             <div class="usage-block">
               <div class="ub-case">${idx + 1}️⃣ ${u.case || ''}</div>
               <div class="ub-meaning"><span data-lang-el="bn">${(u.meaning && u.meaning.bn) || ''}</span><span data-lang-el="en">${(u.meaning && u.meaning.en) || ''}</span></div>
@@ -85120,32 +85120,32 @@ const DATA = {
                   <div><span data-lang-el="bn" class="bn">${e.bn}</span><span data-lang-el="en" class="bn">${e.en}</span></div>
                 </div>`).join('')}
             </div>`).join('');
-        }
+    }
 
-        let bonusItems = [].concat(item.ex || [], item.extra || []);
-        let bonusHtml = '';
-        if (bonusItems.length) {
-          bonusHtml = `<div class="extra-examples">
+    let bonusItems = [].concat(item.ex || [], item.extra || []);
+    let bonusHtml = '';
+    if (bonusItems.length) {
+      bonusHtml = `<div class="extra-examples">
             <div class="rc-section-title"><span data-lang-el="bn">আরও উদাহরণ</span><span data-lang-el="en">More Examples</span></div>` +
-            bonusItems.map(e => `
+        bonusItems.map(e => `
               <div class="example">
                 <button class="ex-speak-btn" data-speak="${e.zh.replace(/"/g, '&quot;')}">🔊</button>
                 <div class="zh">${e.zh}</div>
                 <div class="py">${toneColorPinyin(e.py)}</div>
                 <div><span data-lang-el="bn" class="bn">${e.bn}</span><span data-lang-el="en" class="bn">${e.en}</span></div>
               </div>`).join('') +
-            `</div><button class="more-ex-btn"><span data-lang-el="bn">➕ আরও উদাহরণ দেখাও</span><span data-lang-el="en">➕ Show more examples</span></button>`;
-        }
+        `</div><button class="more-ex-btn"><span data-lang-el="bn">➕ আরও উদাহরণ দেখাও</span><span data-lang-el="en">➕ Show more examples</span></button>`;
+    }
 
-        let collocHtml = '';
-        if (item.collocation && item.collocation.length) {
-          collocHtml = `<div class="rc-section-title"><span data-lang-el="bn">প্রচলিত শব্দগুচ্ছ</span><span data-lang-el="en">Collocations</span></div>
+    let collocHtml = '';
+    if (item.collocation && item.collocation.length) {
+      collocHtml = `<div class="rc-section-title"><span data-lang-el="bn">প্রচলিত শব্দগুচ্ছ</span><span data-lang-el="en">Collocations</span></div>
             <div class="collocation-wrap">${item.collocation.map(c => `<button class="colloc-chip" data-speak="${c.replace(/"/g, '&quot;')}">🔊 ${c}</button>`).join('')}</div>`;
-        }
+    }
 
-        const usageCount = (item.usage && item.usage.length) || 0;
+    const usageCount = (item.usage && item.usage.length) || 0;
 
-        card.innerHTML = `
+    card.innerHTML = `
           <div class="rc-topline">
             <span class="type-badge ${typeClass}">${item.type || ''}</span>
             <div class="rc-right-badges">
@@ -85174,51 +85174,51 @@ const DATA = {
           </div>
         `;
 
-        const expandedBox = card.querySelector('.rc-expanded');
-        const expandBtn = card.querySelector('.expand-btn');
-        const ebLabel = expandBtn.querySelector('.eb-label');
-        function setExpanded(state) {
-          expandedBox.classList.toggle('show', state);
-          ebLabel.innerHTML = state
-            ? `<span data-lang-el="bn">▲ সংক্ষিপ্ত করুন</span><span data-lang-el="en">▲ Show less</span>`
-            : `<span data-lang-el="bn">▼ বিস্তারিত দেখুন</span><span data-lang-el="en">▼ Show details</span>`;
-        }
-        expandBtn.onclick = () => setExpanded(!expandedBox.classList.contains('show'));
-        card.querySelector('.collapse-btn').onclick = () => setExpanded(false);
-        card.querySelector('.bm-btn').onclick = (ev) => {
-          ev.stopPropagation();
-          if (bookmarks[getUid(item)]) delete bookmarks[getUid(item)]; else bookmarks[getUid(item)] = true;
-          saveBookmarks(); renderCards(document.getElementById('searchInput').value);
-        };
-        card.querySelector('.speak-btn').onclick = () => speak(item.zh);
-        card.querySelector('.quick-speak-btn').onclick = (ev) => { ev.stopPropagation(); speak(item.zh); };
-        card.querySelectorAll('.ex-speak-btn, .colloc-chip').forEach(b => {
-          b.onclick = () => speak(b.dataset.speak);
-        });
-        const moreBtn = card.querySelector('.more-ex-btn');
-        if (moreBtn) {
-          const extraBox = card.querySelector('.extra-examples');
-          moreBtn.onclick = () => extraBox.classList.toggle('show');
-        }
-        return card;
-      }
+    const expandedBox = card.querySelector('.rc-expanded');
+    const expandBtn = card.querySelector('.expand-btn');
+    const ebLabel = expandBtn.querySelector('.eb-label');
+    function setExpanded(state) {
+      expandedBox.classList.toggle('show', state);
+      ebLabel.innerHTML = state
+        ? `<span data-lang-el="bn">▲ সংক্ষিপ্ত করুন</span><span data-lang-el="en">▲ Show less</span>`
+        : `<span data-lang-el="bn">▼ বিস্তারিত দেখুন</span><span data-lang-el="en">▼ Show details</span>`;
+    }
+    expandBtn.onclick = () => setExpanded(!expandedBox.classList.contains('show'));
+    card.querySelector('.collapse-btn').onclick = () => setExpanded(false);
+    card.querySelector('.bm-btn').onclick = (ev) => {
+      ev.stopPropagation();
+      if (bookmarks[getUid(item)]) delete bookmarks[getUid(item)]; else bookmarks[getUid(item)] = true;
+      saveBookmarks(); renderCards(document.getElementById('searchInput').value);
+    };
+    card.querySelector('.speak-btn').onclick = () => speak(item.zh);
+    card.querySelector('.quick-speak-btn').onclick = (ev) => { ev.stopPropagation(); speak(item.zh); };
+    card.querySelectorAll('.ex-speak-btn, .colloc-chip').forEach(b => {
+      b.onclick = () => speak(b.dataset.speak);
+    });
+    const moreBtn = card.querySelector('.more-ex-btn');
+    if (moreBtn) {
+      const extraBox = card.querySelector('.extra-examples');
+      moreBtn.onclick = () => extraBox.classList.toggle('show');
+    }
+    return card;
+  }
 
-      /* ============ LEGACY SCHEMA CARD (unified compact/expand too) ============ */
-      card.className = 'card';
-      let exHtml = item.ex.map(e => `
+  /* ============ LEGACY SCHEMA CARD (unified compact/expand too) ============ */
+  card.className = 'card';
+  let exHtml = item.ex.map(e => `
       <div class="example">
         <button class="ex-speak-btn" data-speak="${e.zh.replace(/"/g, '&quot;')}">🔊</button>
         <div class="zh">${e.zh} ${e.tag ? `<span style="font-size:10px;color:var(--jade);border:1px solid var(--jade);border-radius:4px;padding:1px 5px;">${e.tag}</span>` : ''}</div>
         <div class="py">${toneColorPinyin(e.py)}</div>
         <div><span data-lang-el="bn" class="bn">${e.bn}</span><span data-lang-el="en" class="bn">${e.en}</span></div>
       </div>`).join('');
-      let extraHtml = '';
-      if (item.extra && item.extra.length) {
-        extraHtml = `<div class="extra-examples">` +
-          item.extra.map(e => `<div class="example"><button class="ex-speak-btn" data-speak="${e.zh.replace(/"/g, '&quot;')}">🔊</button><div class="zh">${e.zh}</div><div class="py">${toneColorPinyin(e.py)}</div><div><span data-lang-el="bn" class="bn">${e.bn}</span><span data-lang-el="en" class="bn">${e.en}</span></div></div>`).join('') +
-          `</div><button class="more-ex-btn"><span data-lang-el="bn">➕ আরও উদাহরণ দেখাও</span><span data-lang-el="en">➕ Show more examples</span></button>`;
-      }
-      card.innerHTML = `
+  let extraHtml = '';
+  if (item.extra && item.extra.length) {
+    extraHtml = `<div class="extra-examples">` +
+      item.extra.map(e => `<div class="example"><button class="ex-speak-btn" data-speak="${e.zh.replace(/"/g, '&quot;')}">🔊</button><div class="zh">${e.zh}</div><div class="py">${toneColorPinyin(e.py)}</div><div><span data-lang-el="bn" class="bn">${e.bn}</span><span data-lang-el="en" class="bn">${e.en}</span></div></div>`).join('') +
+      `</div><button class="more-ex-btn"><span data-lang-el="bn">➕ আরও উদাহরণ দেখাও</span><span data-lang-el="en">➕ Show more examples</span></button>`;
+  }
+  card.innerHTML = `
       <div class="card-top">
         <div>
           <div class="zh-word zh">${item.zh}</div>
@@ -85242,143 +85242,143 @@ const DATA = {
         <button class="collapse-btn"><span data-lang-el="bn">▲ ছোট করুন</span><span data-lang-el="en">▲ Show less</span></button>
       </div>
     `;
-      const expandedBox = card.querySelector('.rc-expanded');
-      const expandBtn = card.querySelector('.expand-btn');
-      const ebLabel = expandBtn.querySelector('.eb-label');
-      function setExpandedLegacy(state) {
-        expandedBox.classList.toggle('show', state);
-        ebLabel.innerHTML = state
-          ? `<span data-lang-el="bn">▲ সংক্ষিপ্ত করুন</span><span data-lang-el="en">▲ Show less</span>`
-          : `<span data-lang-el="bn">▼ বিস্তারিত দেখুন</span><span data-lang-el="en">▼ Show details</span>`;
-      }
-      expandBtn.onclick = () => setExpandedLegacy(!expandedBox.classList.contains('show'));
-      card.querySelector('.collapse-btn').onclick = () => setExpandedLegacy(false);
-      card.querySelector('.bm-btn').onclick = () => {
-        if (bookmarks[getUid(item)]) delete bookmarks[getUid(item)]; else bookmarks[getUid(item)] = true;
-        saveBookmarks(); renderCards(document.getElementById('searchInput').value);
-      };
-      card.querySelector('.speak-btn').onclick = () => speak(item.zh);
-        card.querySelector('.quick-speak-btn').onclick = (ev) => { ev.stopPropagation(); speak(item.zh); };
-      card.querySelectorAll('.ex-speak-btn').forEach(b => {
-        b.onclick = () => speak(b.dataset.speak);
-      });
-      const moreBtn = card.querySelector('.more-ex-btn');
-      if (moreBtn) {
-        const extraBox = card.querySelector('.extra-examples');
-        moreBtn.onclick = () => extraBox.classList.toggle('show');
-      }
-      return card;
+  const expandedBox = card.querySelector('.rc-expanded');
+  const expandBtn = card.querySelector('.expand-btn');
+  const ebLabel = expandBtn.querySelector('.eb-label');
+  function setExpandedLegacy(state) {
+    expandedBox.classList.toggle('show', state);
+    ebLabel.innerHTML = state
+      ? `<span data-lang-el="bn">▲ সংক্ষিপ্ত করুন</span><span data-lang-el="en">▲ Show less</span>`
+      : `<span data-lang-el="bn">▼ বিস্তারিত দেখুন</span><span data-lang-el="en">▼ Show details</span>`;
+  }
+  expandBtn.onclick = () => setExpandedLegacy(!expandedBox.classList.contains('show'));
+  card.querySelector('.collapse-btn').onclick = () => setExpandedLegacy(false);
+  card.querySelector('.bm-btn').onclick = () => {
+    if (bookmarks[getUid(item)]) delete bookmarks[getUid(item)]; else bookmarks[getUid(item)] = true;
+    saveBookmarks(); renderCards(document.getElementById('searchInput').value);
+  };
+  card.querySelector('.speak-btn').onclick = () => speak(item.zh);
+  card.querySelector('.quick-speak-btn').onclick = (ev) => { ev.stopPropagation(); speak(item.zh); };
+  card.querySelectorAll('.ex-speak-btn').forEach(b => {
+    b.onclick = () => speak(b.dataset.speak);
+  });
+  const moreBtn = card.querySelector('.more-ex-btn');
+  if (moreBtn) {
+    const extraBox = card.querySelector('.extra-examples');
+    moreBtn.onclick = () => extraBox.classList.toggle('show');
+  }
+  return card;
+}
+
+/* ================= RENDER CARDS ================= */
+function renderCards(filterText) {
+  const grid = document.getElementById('cardGrid');
+  const filterBar = document.getElementById('filterBar');
+  const introBox = document.getElementById('categoryIntro');
+  const quizPanelBox = document.getElementById('quizPanelBox');
+  grid.innerHTML = '';
+  filterBar.innerHTML = '';
+  const catData = DATA[currentCategory];
+  const catIntro = catData.intro;
+  introBox.innerHTML = (catIntro && !filterText) ? catIntro : '';
+  quizPanelBox.innerHTML = filterText ? '' : renderQuizPanelHtml(catData.items);
+  if (!filterText) wireQuizPanelButtons(catData.items);
+
+  let items = catData.items;
+
+  /* ---- Search disables bookmark-filter mode (per spec) ---- */
+  if (filterText && bookmarkFilterActive) bookmarkFilterActive = false;
+
+  /* ---- Global search overrides everything (flat results across all categories) ---- */
+  if (filterText) {
+    grid.className = 'grid';
+    const f = filterText.toLowerCase();
+    let pool = [];
+    Object.values(DATA).forEach(c => pool = pool.concat(c.items));
+    items = pool.filter(i => i.zh.includes(filterText) || i.py.toLowerCase().includes(f) || i.en.toLowerCase().includes(f) || i.bn.includes(filterText));
+    if (items.length === 0) {
+      grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--ink-soft); padding:30px;">
+      <span data-lang-el="bn">কোনো ফলাফল পাওয়া যায়নি</span><span data-lang-el="en">No results found</span></div>`;
+      return;
     }
+    items.forEach(item => grid.appendChild(buildCardElement(item)));
+    return;
+  }
 
-    /* ================= RENDER CARDS ================= */
-    function renderCards(filterText) {
-      const grid = document.getElementById('cardGrid');
-      const filterBar = document.getElementById('filterBar');
-      const introBox = document.getElementById('categoryIntro');
-      const quizPanelBox = document.getElementById('quizPanelBox');
-      grid.innerHTML = '';
-      filterBar.innerHTML = '';
-      const catData = DATA[currentCategory];
-      const catIntro = catData.intro;
-      introBox.innerHTML = (catIntro && !filterText) ? catIntro : '';
-      quizPanelBox.innerHTML = filterText ? '' : renderQuizPanelHtml(catData.items);
-      if (!filterText) wireQuizPanelButtons(catData.items);
+  /* ---- Bookmark filter button: update count/state, apply if active ---- */
+  const bmCount = catData.items.filter(it => bookmarks[getUid(it)]).length;
+  const bmBtn = document.getElementById('bookmarkFilterBtn');
+  document.getElementById('bookmarkFilterCount').textContent = bmCount;
+  bmBtn.disabled = bmCount === 0 && !bookmarkFilterActive;
+  bmBtn.classList.toggle('active', bookmarkFilterActive);
+  if (bookmarkFilterActive) {
+    items = items.filter(it => bookmarks[getUid(it)]);
+  }
 
-      let items = catData.items;
+  /* ---- Detect if this category supports level+category filtering ---- */
+  const hasLevelCategory = items.length > 0 && items[0].level !== undefined && items[0].category !== undefined;
 
-      /* ---- Search disables bookmark-filter mode (per spec) ---- */
-      if (filterText && bookmarkFilterActive) bookmarkFilterActive = false;
-
-      /* ---- Global search overrides everything (flat results across all categories) ---- */
-      if (filterText) {
-        grid.className = 'grid';
-        const f = filterText.toLowerCase();
-        let pool = [];
-        Object.values(DATA).forEach(c => pool = pool.concat(c.items));
-        items = pool.filter(i => i.zh.includes(filterText) || i.py.toLowerCase().includes(f) || i.en.toLowerCase().includes(f) || i.bn.includes(filterText));
-        if (items.length === 0) {
-          grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--ink-soft); padding:30px;">
+  if (!hasLevelCategory) {
+    /* Fallback: original flat grid, unaffected, no bugs for existing categories */
+    grid.className = 'grid';
+    if (items.length === 0) {
+      grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--ink-soft); padding:30px;">
       <span data-lang-el="bn">কোনো ফলাফল পাওয়া যায়নি</span><span data-lang-el="en">No results found</span></div>`;
-          return;
-        }
-        items.forEach(item => grid.appendChild(buildCardElement(item)));
-        return;
-      }
+      return;
+    }
+    items.forEach(item => grid.appendChild(buildCardElement(item)));
+    return;
+  }
 
-      /* ---- Bookmark filter button: update count/state, apply if active ---- */
-      const bmCount = catData.items.filter(it => bookmarks[getUid(it)]).length;
-      const bmBtn = document.getElementById('bookmarkFilterBtn');
-      document.getElementById('bookmarkFilterCount').textContent = bmCount;
-      bmBtn.disabled = bmCount === 0 && !bookmarkFilterActive;
-      bmBtn.classList.toggle('active', bookmarkFilterActive);
-      if (bookmarkFilterActive) {
-        items = items.filter(it => bookmarks[getUid(it)]);
-      }
+  /* ---- Level + Category dynamic filter mode ---- */
+  grid.className = '';
 
-      /* ---- Detect if this category supports level+category filtering ---- */
-      const hasLevelCategory = items.length > 0 && items[0].level !== undefined && items[0].category !== undefined;
+  // Unique levels in first-seen order
+  const levelsSeen = [];
+  items.forEach(it => { if (!levelsSeen.includes(it.level)) levelsSeen.push(it.level); });
+  levelsSeen.sort((a, b) => parseLevel(a).num - parseLevel(b).num);
 
-      if (!hasLevelCategory) {
-        /* Fallback: original flat grid, unaffected, no bugs for existing categories */
-        grid.className = 'grid';
-        if (items.length === 0) {
-          grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:var(--ink-soft); padding:30px;">
-      <span data-lang-el="bn">কোনো ফলাফল পাওয়া যায়নি</span><span data-lang-el="en">No results found</span></div>`;
-          return;
-        }
-        items.forEach(item => grid.appendChild(buildCardElement(item)));
-        return;
-      }
+  // Items filtered by selected level (for computing available sub-topics)
+  let levelFiltered = currentLevelFilter === 'all' ? items : items.filter(it => it.level === currentLevelFilter);
 
-      /* ---- Level + Category dynamic filter mode ---- */
-      grid.className = '';
+  // Unique categories within the level-filtered set, in first-seen order, with counts
+  const catsAvailable = [];
+  const catCounts = {};
+  levelFiltered.forEach(it => {
+    if (!catsAvailable.includes(it.category)) catsAvailable.push(it.category);
+    catCounts[it.category] = (catCounts[it.category] || 0) + 1;
+  });
 
-      // Unique levels in first-seen order
-      const levelsSeen = [];
-      items.forEach(it => { if (!levelsSeen.includes(it.level)) levelsSeen.push(it.level); });
-      levelsSeen.sort((a, b) => parseLevel(a).num - parseLevel(b).num);
+  // If current subtopic filter isn't valid for this level anymore, reset it
+  if (currentSubtopicFilter !== 'all' && !catsAvailable.includes(currentSubtopicFilter)) {
+    currentSubtopicFilter = 'all';
+  }
 
-      // Items filtered by selected level (for computing available sub-topics)
-      let levelFiltered = currentLevelFilter === 'all' ? items : items.filter(it => it.level === currentLevelFilter);
+  // Total count for this whole category (unaffected by any filter)
+  const totalCount = items.length;
+  const totalCatsAll = new Set(items.map(it => it.category)).size;
 
-      // Unique categories within the level-filtered set, in first-seen order, with counts
-      const catsAvailable = [];
-      const catCounts = {};
-      levelFiltered.forEach(it => {
-        if (!catsAvailable.includes(it.category)) catsAvailable.push(it.category);
-        catCounts[it.category] = (catCounts[it.category] || 0) + 1;
-      });
+  // Build filter bar HTML — level pills with per-level item + category counts
+  let pillsHtml = `<button class="level-pill ${currentLevelFilter === 'all' ? 'active' : ''}" data-level="all"><div class="lp-top">🌱 <span data-lang-el="bn">সব</span><span data-lang-el="en">All</span> <span class="lp-count">${totalCount}</span></div><div class="lp-sub"><span data-lang-el="bn">${totalCatsAll}টি ক্যাটাগরি</span><span data-lang-el="en">${totalCatsAll} categories</span></div></button>`;
+  levelsSeen.forEach(lv => {
+    const p = parseLevel(lv);
+    const emoji = LEVEL_EMOJI[p.num] || '⚪';
+    const levelItems = items.filter(it => it.level === lv);
+    const cnt = levelItems.length;
+    const catCountForLevel = new Set(levelItems.map(it => it.category)).size;
+    pillsHtml += `<button class="level-pill ${currentLevelFilter === lv ? 'active' : ''}" data-level="${cssSafe(lv)}"><div class="lp-top"><span>${emoji} ${p.short}</span><span class="lp-count">${cnt}</span></div><div class="lp-sub">${p.subtitle}</div><div class="lp-catcount"><span data-lang-el="bn">${catCountForLevel}টি ক্যাটাগরি</span><span data-lang-el="en">${catCountForLevel} categories</span></div></button>`;
+  });
 
-      // If current subtopic filter isn't valid for this level anymore, reset it
-      if (currentSubtopicFilter !== 'all' && !catsAvailable.includes(currentSubtopicFilter)) {
-        currentSubtopicFilter = 'all';
-      }
+  let subtopicOptions = `<option value="all">All / সব (${levelFiltered.length})</option>` +
+    catsAvailable.map(c => `<option value="${c}" ${currentSubtopicFilter === c ? 'selected' : ''}>${c} (${catCounts[c]})</option>`).join('');
 
-      // Total count for this whole category (unaffected by any filter)
-      const totalCount = items.length;
-      const totalCatsAll = new Set(items.map(it => it.category)).size;
+  let contextHtml = '';
+  if (currentLevelFilter !== 'all') {
+    const p = parseLevel(currentLevelFilter);
+    contextHtml = `<div class="level-context"><span data-lang-el="bn">এখন দেখাচ্ছে:</span><span data-lang-el="en">Now showing:</span> <strong>${p.short} — ${p.subtitle}</strong> (${levelFiltered.length} <span data-lang-el="bn">টি</span><span data-lang-el="en">items</span>)</div>`;
+  }
 
-      // Build filter bar HTML — level pills with per-level item + category counts
-      let pillsHtml = `<button class="level-pill ${currentLevelFilter === 'all' ? 'active' : ''}" data-level="all"><div class="lp-top">🌱 <span data-lang-el="bn">সব</span><span data-lang-el="en">All</span> <span class="lp-count">${totalCount}</span></div><div class="lp-sub"><span data-lang-el="bn">${totalCatsAll}টি ক্যাটাগরি</span><span data-lang-el="en">${totalCatsAll} categories</span></div></button>`;
-      levelsSeen.forEach(lv => {
-        const p = parseLevel(lv);
-        const emoji = LEVEL_EMOJI[p.num] || '⚪';
-        const levelItems = items.filter(it => it.level === lv);
-        const cnt = levelItems.length;
-        const catCountForLevel = new Set(levelItems.map(it => it.category)).size;
-        pillsHtml += `<button class="level-pill ${currentLevelFilter === lv ? 'active' : ''}" data-level="${cssSafe(lv)}"><div class="lp-top"><span>${emoji} ${p.short}</span><span class="lp-count">${cnt}</span></div><div class="lp-sub">${p.subtitle}</div><div class="lp-catcount"><span data-lang-el="bn">${catCountForLevel}টি ক্যাটাগরি</span><span data-lang-el="en">${catCountForLevel} categories</span></div></button>`;
-      });
-
-      let subtopicOptions = `<option value="all">All / সব (${levelFiltered.length})</option>` +
-        catsAvailable.map(c => `<option value="${c}" ${currentSubtopicFilter === c ? 'selected' : ''}>${c} (${catCounts[c]})</option>`).join('');
-
-      let contextHtml = '';
-      if (currentLevelFilter !== 'all') {
-        const p = parseLevel(currentLevelFilter);
-        contextHtml = `<div class="level-context"><span data-lang-el="bn">এখন দেখাচ্ছে:</span><span data-lang-el="en">Now showing:</span> <strong>${p.short} — ${p.subtitle}</strong> (${levelFiltered.length} <span data-lang-el="bn">টি</span><span data-lang-el="en">items</span>)</div>`;
-      }
-
-      filterBar.innerHTML = `<div class="filter-bar">
+  filterBar.innerHTML = `<div class="filter-bar">
         <div class="filter-header-row">
           <div class="filter-title"><span data-lang-el="bn">কোন Level দেখতে চান?</span><span data-lang-el="en">Which level do you want to see?</span></div>
           <div class="total-badge"><span data-lang-el="bn">মোট</span><span data-lang-el="en">Total</span>: ${totalCount}</div>
@@ -85391,51 +85391,51 @@ const DATA = {
         ${contextHtml}
       </div>`;
 
-      // Wire up level pill clicks (store a map from safe-key back to raw level string)
-      const levelKeyMap = {};
-      levelsSeen.forEach(lv => levelKeyMap[cssSafe(lv)] = lv);
-      filterBar.querySelectorAll('.level-pill').forEach(btn => {
-        btn.onclick = () => {
-          const key = btn.dataset.level;
-          currentLevelFilter = key === 'all' ? 'all' : levelKeyMap[key];
-          currentSubtopicFilter = 'all';
-          renderCards();
-        };
-      });
-      const subtopicSelect = document.getElementById('subtopicSelect');
-      if (subtopicSelect) {
-        subtopicSelect.onchange = () => {
-          currentSubtopicFilter = subtopicSelect.value;
-          renderCards();
-        };
-      }
+  // Wire up level pill clicks (store a map from safe-key back to raw level string)
+  const levelKeyMap = {};
+  levelsSeen.forEach(lv => levelKeyMap[cssSafe(lv)] = lv);
+  filterBar.querySelectorAll('.level-pill').forEach(btn => {
+    btn.onclick = () => {
+      const key = btn.dataset.level;
+      currentLevelFilter = key === 'all' ? 'all' : levelKeyMap[key];
+      currentSubtopicFilter = 'all';
+      renderCards();
+    };
+  });
+  const subtopicSelect = document.getElementById('subtopicSelect');
+  if (subtopicSelect) {
+    subtopicSelect.onchange = () => {
+      currentSubtopicFilter = subtopicSelect.value;
+      renderCards();
+    };
+  }
 
-      // Apply subtopic filter on top of level filter
-      let finalItems = levelFiltered;
-      if (currentSubtopicFilter !== 'all') {
-        finalItems = finalItems.filter(it => it.category === currentSubtopicFilter);
-      }
+  // Apply subtopic filter on top of level filter
+  let finalItems = levelFiltered;
+  if (currentSubtopicFilter !== 'all') {
+    finalItems = finalItems.filter(it => it.category === currentSubtopicFilter);
+  }
 
-      if (finalItems.length === 0) {
-        grid.innerHTML = `<div style="text-align:center; color:var(--ink-soft); padding:30px;">
+  if (finalItems.length === 0) {
+    grid.innerHTML = `<div style="text-align:center; color:var(--ink-soft); padding:30px;">
       <span data-lang-el="bn">কোনো ফলাফল পাওয়া যায়নি</span><span data-lang-el="en">No results found</span></div>`;
-        return;
-      }
+    return;
+  }
 
-      // Group by category (sub-topic), preserving first-seen order
-      const grouped = {};
-      const groupOrder = [];
-      finalItems.forEach(it => {
-        if (!grouped[it.category]) { grouped[it.category] = []; groupOrder.push(it.category); }
-        grouped[it.category].push(it);
-      });
+  // Group by category (sub-topic), preserving first-seen order
+  const grouped = {};
+  const groupOrder = [];
+  finalItems.forEach(it => {
+    if (!grouped[it.category]) { grouped[it.category] = []; groupOrder.push(it.category); }
+    grouped[it.category].push(it);
+  });
 
-      groupOrder.forEach((catName, idx) => {
-        const sectionKey = currentCategory + '::' + catName;
-        const isCollapsed = !openSections.has(sectionKey);
-        const section = document.createElement('div');
-        section.className = 'cat-section' + (isCollapsed ? ' collapsed' : '');
-        section.innerHTML = `
+  groupOrder.forEach((catName, idx) => {
+    const sectionKey = currentCategory + '::' + catName;
+    const isCollapsed = !openSections.has(sectionKey);
+    const section = document.createElement('div');
+    section.className = 'cat-section' + (isCollapsed ? ' collapsed' : '');
+    section.innerHTML = `
           <div class="cat-section-header">
             <div class="cs-title"><span class="cs-icon">${idx + 1}</span> ${catName}</div>
             <div class="cs-right">
@@ -85445,128 +85445,165 @@ const DATA = {
           </div>
           <div class="cat-section-grid"></div>
         `;
-        section.querySelector('.cat-section-header').onclick = () => {
-          if (openSections.has(sectionKey)) openSections.delete(sectionKey);
-          else openSections.add(sectionKey);
-          section.classList.toggle('collapsed');
-        };
-        const sectionGrid = section.querySelector('.cat-section-grid');
-        grouped[catName].forEach(item => sectionGrid.appendChild(buildCardElement(item)));
-        grid.appendChild(section);
-      });
-    }
-    function cssSafe(s) { return s.replace(/[^a-zA-Z0-9]/g, ''); }
-
-
-    /* ================= AUDIO (TTS) ================= */
-    let availableVoices = [];
-    function guessLabel(voice, idx) {
-      const n = voice.name.toLowerCase();
-      let gender = '';
-      if (n.includes('female') || n.includes('yaoyao') || n.includes('xiaoxiao') || n.includes('huihui') || n.includes('ting-ting') || n.includes('tingting')) gender = 'Female';
-      else if (n.includes('male') || n.includes('kangkang') || n.includes('yunyang') || n.includes('yunjian')) gender = 'Male';
-      else if (n.includes('child') || n.includes('kid')) gender = 'Kids';
-      return gender ? `Voice ${idx + 1} (${gender})` : `Voice ${idx + 1}`;
-    }
-    function populateVoices() {
-      if (!('speechSynthesis' in window)) return;
-      availableVoices = speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('zh'));
-      renderVoiceDropdown();
-    }
-    async function renderVoiceDropdown() {
-      const dd = document.getElementById('voiceDropdown');
-      const btn = document.getElementById('voiceBtn');
-      if (availableVoices.length === 0) {
-        dd.innerHTML = `<div class="empty-note">No Chinese voice detected on this browser/device. Try Chrome, Safari, or Edge.</div>`;
-        btn.innerHTML = `🔊 No voice ▾`;
-        return;
-      }
-      let savedName = null;
-      try { const s = await window.storage.get('pref:voice'); if (s) savedName = s.value; } catch (e) { }
-      if (!selectedVoice) selectedVoice = availableVoices.find(v => v.name === savedName) || availableVoices[0];
-      dd.innerHTML = availableVoices.map((v, i) => {
-        const label = guessLabel(v, i);
-        const sel = v.name === selectedVoice.name ? 'selected' : '';
-        return `<div class="voice-opt ${sel}" data-idx="${i}"><span>${label}</span><small>${v.lang}${sel ? ' · default' : ''}</small></div>`;
-      }).join('');
-      dd.querySelectorAll('.voice-opt').forEach(el => {
-        el.onclick = async () => {
-          selectedVoice = availableVoices[parseInt(el.dataset.idx)];
-          try { await window.storage.set('pref:voice', selectedVoice.name); } catch (e) { }
-          renderVoiceDropdown();
-          dd.classList.remove('show');
-          speak('你好');
-        };
-      });
-      btn.innerHTML = `🔊 ${guessLabel(selectedVoice, availableVoices.indexOf(selectedVoice))} ▾`;
-    }
-    document.getElementById('voiceBtn').onclick = (e) => {
-      e.stopPropagation();
-      document.getElementById('voiceDropdown').classList.toggle('show');
+    section.querySelector('.cat-section-header').onclick = () => {
+      if (openSections.has(sectionKey)) openSections.delete(sectionKey);
+      else openSections.add(sectionKey);
+      section.classList.toggle('collapsed');
     };
-    document.addEventListener('click', () => document.getElementById('voiceDropdown').classList.remove('show'));
-    let audioSpeed = 'normal';
-    const SPEED_RATES = { slow: 0.6, normal: 0.9, fast: 1.3 };
-    document.querySelectorAll('.speed-btn').forEach(btn => {
-      btn.onclick = async () => {
-        audioSpeed = btn.dataset.speed;
-        document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        try { await window.storage.set('pref:speed', audioSpeed); } catch (e) { }
-      };
-    });
-    function speak(text) {
-      if (!('speechSynthesis' in window)) {
-        alert('This browser does not support audio (Text-to-Speech). Please use Chrome, Safari, or Edge.');
-        return;
-      }
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'zh-CN';
-      if (selectedVoice) u.voice = selectedVoice;
-      u.rate = SPEED_RATES[audioSpeed] || 0.9;
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    }
-    if ('speechSynthesis' in window) {
-      speechSynthesis.onvoiceschanged = populateVoices;
-      populateVoices();
-    }
+    const sectionGrid = section.querySelector('.cat-section-grid');
+    grouped[catName].forEach(item => sectionGrid.appendChild(buildCardElement(item)));
+    grid.appendChild(section);
+  });
+}
+function cssSafe(s) { return s.replace(/[^a-zA-Z0-9]/g, ''); }
 
-    /* ================= QUIZ ================= */
-    function renderQuizPanelHtml(items) {
-      if (!items || items.length === 0) return '';
-      const hasLevelCategory = items[0].level !== undefined && items[0].category !== undefined;
-      const totalCount = items.length;
 
-      let levelOptions = '';
-      let catOptions = '';
-      if (hasLevelCategory) {
-        const levels = [];
-        items.forEach(it => { if (!levels.includes(it.level)) levels.push(it.level); });
-        levels.sort((a, b) => parseLevel(a).num - parseLevel(b).num);
-        levelOptions = levels.map(lv => {
-          const p = parseLevel(lv);
-          const cnt = items.filter(it => it.level === lv).length;
-          return `<option value="${lv.replace(/"/g, '&quot;')}">${p.short} — ${p.subtitle} (${cnt})</option>`;
-        }).join('');
+/* ================= AUDIO (TTS) ================= */
+let availableVoices = [];
+function guessLabel(voice, idx) {
+  const n = voice.name.toLowerCase();
+  let gender = '';
+  if (n.includes('female') || n.includes('yaoyao') || n.includes('xiaoxiao') || n.includes('huihui') || n.includes('ting-ting') || n.includes('tingting')) gender = 'Female';
+  else if (n.includes('male') || n.includes('kangkang') || n.includes('yunyang') || n.includes('yunjian')) gender = 'Male';
+  else if (n.includes('child') || n.includes('kid')) gender = 'Kids';
+  return gender ? `Voice ${idx + 1} (${gender})` : `Voice ${idx + 1}`;
+}
+// function populateVoices() {
+//   if (!('speechSynthesis' in window)) return;
+//   availableVoices = speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('zh'));
+//   renderVoiceDropdown();
+// }
 
-        const cats = [];
-        items.forEach(it => { if (!cats.includes(it.category)) cats.push(it.category); });
-        catOptions = cats.map(c => {
-          const cnt = items.filter(it => it.category === c).length;
-          return `<option value="${c.replace(/"/g, '&quot;')}">${c} (${cnt})</option>`;
-        }).join('');
-      }
+//==================== new version 
+function populateVoices() {
+  if (!('speechSynthesis' in window)) return;
 
-      let tiles = `
+  const allVoices = speechSynthesis.getVoices();
+
+  if (allVoices.length === 0) {
+    // Mobile browsers may load voices asynchronously
+    return;
+  }
+
+  availableVoices = allVoices.filter(
+    v => v.lang && v.lang.toLowerCase().startsWith('zh')
+  );
+
+  renderVoiceDropdown();
+}
+/// ====================
+
+async function renderVoiceDropdown() {
+  const dd = document.getElementById('voiceDropdown');
+  const btn = document.getElementById('voiceBtn');
+  if (availableVoices.length === 0) {
+    dd.innerHTML = `<div class="empty-note">No Chinese voice detected on this browser/device. Try Chrome, Safari, or Edge.</div>`;
+    btn.innerHTML = `🔊 No voice ▾`;
+    return;
+  }
+  let savedName = null;
+  try { const s = await window.storage.get('pref:voice'); if (s) savedName = s.value; } catch (e) { }
+  if (!selectedVoice) selectedVoice = availableVoices.find(v => v.name === savedName) || availableVoices[0];
+  dd.innerHTML = availableVoices.map((v, i) => {
+    const label = guessLabel(v, i);
+    const sel = v.name === selectedVoice.name ? 'selected' : '';
+    return `<div class="voice-opt ${sel}" data-idx="${i}"><span>${label}</span><small>${v.lang}${sel ? ' · default' : ''}</small></div>`;
+  }).join('');
+  dd.querySelectorAll('.voice-opt').forEach(el => {
+    el.onclick = async () => {
+      selectedVoice = availableVoices[parseInt(el.dataset.idx)];
+      try { await window.storage.set('pref:voice', selectedVoice.name); } catch (e) { }
+      renderVoiceDropdown();
+      dd.classList.remove('show');
+      speak('你好');
+    };
+  });
+  btn.innerHTML = `🔊 ${guessLabel(selectedVoice, availableVoices.indexOf(selectedVoice))} ▾`;
+}
+document.getElementById('voiceBtn').onclick = (e) => {
+  e.stopPropagation();
+  document.getElementById('voiceDropdown').classList.toggle('show');
+};
+document.addEventListener('click', () => document.getElementById('voiceDropdown').classList.remove('show'));
+let audioSpeed = 'normal';
+const SPEED_RATES = { slow: 0.6, normal: 0.9, fast: 1.3 };
+document.querySelectorAll('.speed-btn').forEach(btn => {
+  btn.onclick = async () => {
+    audioSpeed = btn.dataset.speed;
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    try { await window.storage.set('pref:speed', audioSpeed); } catch (e) { }
+  };
+});
+function speak(text) {
+  if (!('speechSynthesis' in window)) {
+    alert('This browser does not support audio (Text-to-Speech). Please use Chrome, Safari, or Edge.');
+    return;
+  }
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  if (selectedVoice) u.voice = selectedVoice;
+  u.rate = SPEED_RATES[audioSpeed] || 0.9;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+
+
+// if ('speechSynthesis' in window) {
+//   speechSynthesis.onvoiceschanged = populateVoices;
+//   populateVoices();
+// }
+
+
+/////  ===================  new version 
+if ('speechSynthesis' in window) {
+  speechSynthesis.onvoiceschanged = populateVoices;
+
+  // Initial attempt
+  populateVoices();
+
+  // Mobile browsers may load voices later
+  setTimeout(populateVoices, 300);
+  setTimeout(populateVoices, 1000);
+  setTimeout(populateVoices, 2000);
+}
+// =======================================
+
+/* ================= QUIZ ================= */
+function renderQuizPanelHtml(items) {
+  if (!items || items.length === 0) return '';
+  const hasLevelCategory = items[0].level !== undefined && items[0].category !== undefined;
+  const totalCount = items.length;
+
+  let levelOptions = '';
+  let catOptions = '';
+  if (hasLevelCategory) {
+    const levels = [];
+    items.forEach(it => { if (!levels.includes(it.level)) levels.push(it.level); });
+    levels.sort((a, b) => parseLevel(a).num - parseLevel(b).num);
+    levelOptions = levels.map(lv => {
+      const p = parseLevel(lv);
+      const cnt = items.filter(it => it.level === lv).length;
+      return `<option value="${lv.replace(/"/g, '&quot;')}">${p.short} — ${p.subtitle} (${cnt})</option>`;
+    }).join('');
+
+    const cats = [];
+    items.forEach(it => { if (!cats.includes(it.category)) cats.push(it.category); });
+    catOptions = cats.map(c => {
+      const cnt = items.filter(it => it.category === c).length;
+      return `<option value="${c.replace(/"/g, '&quot;')}">${c} (${cnt})</option>`;
+    }).join('');
+  }
+
+  let tiles = `
         <div class="quiz-tile">
           <div class="qt-label">📗 <span data-lang-el="bn">সম্পূর্ণ Quiz</span><span data-lang-el="en">Overall Quiz</span></div>
           <div class="qt-sub">${totalCount} <span data-lang-el="bn">টি</span><span data-lang-el="en">items</span></div>
           <button class="qt-start" id="qtOverallBtn"><span data-lang-el="bn">শুরু করুন ▶</span><span data-lang-el="en">Start ▶</span></button>
         </div>`;
 
-      if (hasLevelCategory) {
-        tiles += `
+  if (hasLevelCategory) {
+    tiles += `
         <div class="quiz-tile">
           <div class="qt-label">🎚 <span data-lang-el="bn">Level অনুযায়ী</span><span data-lang-el="en">By Level</span></div>
           <select id="qtLevelSelect">${levelOptions}</select>
@@ -85577,15 +85614,15 @@ const DATA = {
           <select id="qtCatSelect">${catOptions}</select>
           <button class="qt-start" id="qtCatBtn"><span data-lang-el="bn">শুরু করুন ▶</span><span data-lang-el="en">Start ▶</span></button>
         </div>`;
-      }
+  }
 
-      const isPatternCat = currentCategory === 'pattern';
-      if (isPatternCat) quizQuestionTypeChoice = 'builder';
-      const typeOpts = [
-        ['mixed', '✨ Mixed'], ['mc', '🔘 Multiple Choice'], ['listening', '🔊 Listening'],
-        ['fillblank', '✏️ Fill-in-blank'], ['builder', '🧩 Sentence Builder']
-      ];
-      const typeSelectorHtml = isPatternCat ? '' : `
+  const isPatternCat = currentCategory === 'pattern';
+  if (isPatternCat) quizQuestionTypeChoice = 'builder';
+  const typeOpts = [
+    ['mixed', '✨ Mixed'], ['mc', '🔘 Multiple Choice'], ['listening', '🔊 Listening'],
+    ['fillblank', '✏️ Fill-in-blank'], ['builder', '🧩 Sentence Builder']
+  ];
+  const typeSelectorHtml = isPatternCat ? '' : `
         <div>
           <label><span data-lang-el="bn">প্রশ্নের ধরন</span><span data-lang-el="en">Question type</span></label>
           <select id="qtTypeSelect">
@@ -85593,7 +85630,7 @@ const DATA = {
           </select>
         </div>`;
 
-      return `<div class="quiz-panel">
+  return `<div class="quiz-panel">
         <div class="qp-title">🎯 <span data-lang-el="bn">এই Section থেকে Practice করুন</span><span data-lang-el="en">Practice from this Section</span></div>
         <div class="quiz-tiles">${tiles}</div>
         <div class="quiz-panel-options">
@@ -85608,397 +85645,450 @@ const DATA = {
           ${typeSelectorHtml}
         </div>
       </div>`;
+}
+
+function wireQuizPanelButtons(items) {
+  quizIsSentencePatternMode = (currentCategory === 'pattern');
+
+  function readPanelChoices() {
+    const batchSelect = document.getElementById('qtBatchSelect');
+    const typeSelect = document.getElementById('qtTypeSelect');
+    const batch = batchSelect ? (batchSelect.value === 'all' ? 'all' : parseInt(batchSelect.value)) : 10;
+    const type = quizIsSentencePatternMode ? 'builder' : (typeSelect ? typeSelect.value : 'mixed');
+    // keep module state in sync too, so the dropdown's `selected` attribute stays correct on re-render
+    quizBatchSize = batch;
+    quizQuestionTypeChoice = type;
+    return { batch, type };
+  }
+
+  const overallBtn = document.getElementById('qtOverallBtn');
+  if (overallBtn) overallBtn.onclick = () => { const c = readPanelChoices(); startQuiz(items, 'Overall', c.type, c.batch); };
+  const levelBtn = document.getElementById('qtLevelBtn');
+  if (levelBtn) levelBtn.onclick = () => {
+    const c = readPanelChoices();
+    const lv = document.getElementById('qtLevelSelect').value;
+    startQuiz(items.filter(it => it.level === lv), parseLevel(lv).short, c.type, c.batch);
+  };
+  const catBtn = document.getElementById('qtCatBtn');
+  if (catBtn) catBtn.onclick = () => {
+    const c = readPanelChoices();
+    const cat = document.getElementById('qtCatSelect').value;
+    startQuiz(items.filter(it => it.category === cat), cat, c.type, c.batch);
+  };
+}
+
+function buildQuizPool(scopeItems) {
+  const shuffled = scopeItems.slice().sort(() => Math.random() - 0.5);
+  const n = quizBatchSize === 'all' ? shuffled.length : Math.min(quizBatchSize, shuffled.length);
+  quizPool = shuffled.slice(0, n);
+  quizIndex = 0;
+}
+
+/* ---- Quiz session state ---- */
+let quizFullScope = [];   // full scope for building distractors
+let quizScore = 0;
+let quizCorrect = 0;
+let quizWrong = 0;
+let quizStreak = 0;
+let quizWrongItems = []; // full item objects pushed here on wrong answer; used directly for Retry
+let quizFeedbackLang = 'zh'; // default Chinese
+let quizHearts = 5;
+let quizHeartsEnabled = true;
+let quizQuestionTypeChoice = 'mixed'; // mixed | mc | listening | fillblank | builder
+let quizBatchSize = 10; // 5 | 10 | 'all'
+let quizIsSentencePatternMode = false; // Pattern category => Sentence Builder only
+let quizWordVoice = null; // independent from main dashboard's selectedVoice
+let quizSpeed = 'normal'; // independent from main dashboard's audioSpeed
+let quizVoiceList = [];
+
+const FEEDBACK_MSG = {
+  correct: {
+    1: { en: ['Good!', 'Nice!'], zh: ['好!', '不错!'] },
+    2: { en: ['Great!', 'Well done!'], zh: ['太棒了!', '真棒!'] },
+    3: { en: ['Perfect!', 'Amazing!'], zh: ['完美!', '厉害!'] }
+  },
+  wrong: { en: ['Almost! Keep going.', 'Not quite — you got this.'], zh: ['再试试!', '没关系,继续加油!'] }
+};
+function pickFeedback(isCorrect, streak) {
+  if (!isCorrect) {
+    const arr = FEEDBACK_MSG.wrong[quizFeedbackLang];
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+  const tier = streak >= 4 ? 3 : (streak >= 2 ? 2 : 1);
+  const arr = FEEDBACK_MSG.correct[tier][quizFeedbackLang];
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+const QUIZ_SPEED_RATES = { slow: 0.6, normal: 0.95, fast: 1.3 };
+function speakFeedback(text) {
+  if (!('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  if (quizFeedbackLang === 'zh') {
+    u.lang = 'zh-CN';
+    if (quizWordVoice) u.voice = quizWordVoice;
+  } else {
+    u.lang = 'en-US';
+  }
+  u.rate = QUIZ_SPEED_RATES[quizSpeed] || 0.95;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+function quizSpeak(text) {
+  if (!('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'zh-CN';
+  if (quizWordVoice) u.voice = quizWordVoice;
+  u.rate = QUIZ_SPEED_RATES[quizSpeed] || 0.95;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+
+// function populateQuizVoices() {
+//   if (!('speechSynthesis' in window)) return;
+//   quizVoiceList = speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('zh'));
+//   const sel = document.getElementById('qzVoiceSelect');
+//   if (!sel) return;
+//   if (quizVoiceList.length === 0) {
+//     sel.innerHTML = `<option value="">No Chinese voice found</option>`;
+//     return;
+//   }
+//   sel.innerHTML = quizVoiceList.map((v, i) => `<option value="${i}">${guessLabel(v, i)}</option>`).join('');
+//   if (!quizWordVoice) quizWordVoice = quizVoiceList[0];
+//   const idx = quizVoiceList.indexOf(quizWordVoice);
+//   sel.value = idx >= 0 ? idx : 0;
+// }
+
+
+// ======================= new version ==============
+function populateQuizVoices() {
+  if (!('speechSynthesis' in window)) return;
+
+  const allVoices = speechSynthesis.getVoices();
+
+  if (allVoices.length === 0) return;
+
+  quizVoiceList = allVoices.filter(
+    v => v.lang && v.lang.toLowerCase().startsWith('zh')
+  );
+  const sel = document.getElementById('qzVoiceSelect');
+  if (!sel) return;
+  if (quizVoiceList.length === 0) {
+    sel.innerHTML = `<option value="">No Chinese voice found</option>`;
+    return;
+  }
+  sel.innerHTML = quizVoiceList.map((v, i) => `<option value="${i}">${guessLabel(v, i)}</option>`).join('');
+  if (!quizWordVoice) quizWordVoice = quizVoiceList[0];
+  const idx = quizVoiceList.indexOf(quizWordVoice);
+  sel.value = idx >= 0 ? idx : 0;
+}
+// ========================================================
+
+/// ============================== new version add new ======================
+if ('speechSynthesis' in window) {
+  speechSynthesis.addEventListener('voiceschanged', () => {
+    populateVoices();
+    populateQuizVoices();
+  });
+
+  populateVoices();
+  populateQuizVoices();
+
+  setTimeout(() => {
+    populateVoices();
+    populateQuizVoices();
+  }, 300);
+
+  setTimeout(() => {
+    populateVoices();
+    populateQuizVoices();
+  }, 1000);
+
+  setTimeout(() => {
+    populateVoices();
+    populateQuizVoices();
+  }, 2000);
+}
+// =======================================================
+
+/* ---- Chime sound effect (Web Audio API, no external file) ---- */
+let audioCtx = null;
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+function playTone(freq, startTime, duration, gainPeak) {
+  const ctx = getAudioCtx();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0, startTime);
+  gain.gain.linearRampToValueAtTime(gainPeak, startTime + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.connect(gain).connect(ctx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+function playChime(isCorrect, streak) {
+  try {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    if (isCorrect) {
+      const notes = streak >= 4 ? [523, 659, 784, 1047] : (streak >= 2 ? [523, 659, 784] : [523, 659]);
+      notes.forEach((f, i) => playTone(f, now + i * 0.09, 0.22, 0.12));
+    } else {
+      playTone(220, now, 0.28, 0.08);
+      playTone(196, now + 0.12, 0.3, 0.07);
     }
+  } catch (e) { /* audio context unavailable, skip silently */ }
+}
 
-    function wireQuizPanelButtons(items) {
-      quizIsSentencePatternMode = (currentCategory === 'pattern');
 
-      function readPanelChoices() {
-        const batchSelect = document.getElementById('qtBatchSelect');
-        const typeSelect = document.getElementById('qtTypeSelect');
-        const batch = batchSelect ? (batchSelect.value === 'all' ? 'all' : parseInt(batchSelect.value)) : 10;
-        const type = quizIsSentencePatternMode ? 'builder' : (typeSelect ? typeSelect.value : 'mixed');
-        // keep module state in sync too, so the dropdown's `selected` attribute stays correct on re-render
-        quizBatchSize = batch;
-        quizQuestionTypeChoice = type;
-        return { batch, type };
-      }
+function getDistractors(correctItem, n) {
+  const pool = quizFullScope.filter(it => getUid(it) !== getUid(correctItem));
+  const shuffled = pool.slice().sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, n);
+}
 
-      const overallBtn = document.getElementById('qtOverallBtn');
-      if (overallBtn) overallBtn.onclick = () => { const c = readPanelChoices(); startQuiz(items, 'Overall', c.type, c.batch); };
-      const levelBtn = document.getElementById('qtLevelBtn');
-      if (levelBtn) levelBtn.onclick = () => {
-        const c = readPanelChoices();
-        const lv = document.getElementById('qtLevelSelect').value;
-        startQuiz(items.filter(it => it.level === lv), parseLevel(lv).short, c.type, c.batch);
-      };
-      const catBtn = document.getElementById('qtCatBtn');
-      if (catBtn) catBtn.onclick = () => {
-        const c = readPanelChoices();
-        const cat = document.getElementById('qtCatSelect').value;
-        startQuiz(items.filter(it => it.category === cat), cat, c.type, c.batch);
-      };
+function updateStatsUI() {
+  document.getElementById('qzCorrectCount').textContent = quizCorrect;
+  document.getElementById('qzWrongCount').textContent = quizWrong;
+  document.getElementById('qzStreak').textContent = quizStreak;
+  document.getElementById('qzScore').textContent = quizScore;
+  document.getElementById('quizProgress').textContent = `${quizIndex + 1} / ${quizPool.length}`;
+  const pct = ((quizIndex) / quizPool.length) * 100;
+  document.getElementById('quizProgressFill').style.width = pct + '%';
+  const ring = document.getElementById('quizRingFill');
+  const circumference = 106.8;
+  ring.style.strokeDashoffset = circumference - (circumference * pct / 100);
+}
+
+function showFeedback(isCorrect) {
+  const toast = document.getElementById('quizFeedbackToast');
+  const msg = pickFeedback(isCorrect, quizStreak);
+  toast.textContent = (isCorrect ? '🎉 ' : '💛 ') + msg;
+  toast.className = 'qz-feedback-toast show ' + (isCorrect ? 'correct-tone' : 'wrong-tone');
+  speakFeedback(msg);
+  playChime(isCorrect, quizStreak);
+  setTimeout(() => { toast.classList.remove('show'); }, 1100);
+}
+
+function showXpPopup(points) {
+  const el = document.getElementById('quizXpPopup');
+  el.textContent = '+' + points + ' XP';
+  el.classList.remove('animate');
+  void el.offsetWidth; // restart animation
+  el.classList.add('animate');
+}
+
+let quizOutOfHearts = false;
+function registerAnswer(item, isCorrect) {
+  if (isCorrect) {
+    quizCorrect++; quizStreak++;
+    const pts = 10 + Math.min(quizStreak, 5) * 2;
+    quizScore += pts;
+    showXpPopup(pts);
+  } else {
+    quizWrong++; quizStreak = 0;
+    quizWrongItems.push(item);
+    if (quizHeartsEnabled) {
+      quizHearts = Math.max(0, quizHearts - 1);
+      renderHearts();
+      if (quizHearts === 0) quizOutOfHearts = true;
     }
+  }
+  showFeedback(isCorrect);
+  updateStatsUI();
+}
 
-    function buildQuizPool(scopeItems) {
-      const shuffled = scopeItems.slice().sort(() => Math.random() - 0.5);
-      const n = quizBatchSize === 'all' ? shuffled.length : Math.min(quizBatchSize, shuffled.length);
-      quizPool = shuffled.slice(0, n);
-      quizIndex = 0;
-    }
+function nextQuizQuestion() {
+  if (quizOutOfHearts) { showQuizSummary(); return; }
+  quizIndex++;
+  if (quizIndex >= quizPool.length) {
+    showQuizSummary();
+    return;
+  }
+  showQuizCard();
+}
 
-    /* ---- Quiz session state ---- */
-    let quizFullScope = [];   // full scope for building distractors
-    let quizScore = 0;
-    let quizCorrect = 0;
-    let quizWrong = 0;
-    let quizStreak = 0;
-    let quizWrongItems = []; // full item objects pushed here on wrong answer; used directly for Retry
-    let quizFeedbackLang = 'zh'; // default Chinese
-    let quizHearts = 5;
-    let quizHeartsEnabled = true;
-    let quizQuestionTypeChoice = 'mixed'; // mixed | mc | listening | fillblank | builder
-    let quizBatchSize = 10; // 5 | 10 | 'all'
-    let quizIsSentencePatternMode = false; // Pattern category => Sentence Builder only
-    let quizWordVoice = null; // independent from main dashboard's selectedVoice
-    let quizSpeed = 'normal'; // independent from main dashboard's audioSpeed
-    let quizVoiceList = [];
+function getBuilderSentence(item) {
+  if (item.usage && item.usage.length && item.usage[0].examples && item.usage[0].examples.length) {
+    return item.usage[0].examples[0];
+  }
+  if (item.ex && item.ex.length) return item.ex[0];
+  return null;
+}
+function eligibleTypes(item) {
+  const types = [];
+  if (quizFullScope.length >= 2) types.push('mc', 'listening');
+  const hasFillSource = item.usage && item.usage.length && item.usage[0].examples && item.usage[0].examples.length;
+  if (hasFillSource) types.push('fillblank');
+  const sentence = getBuilderSentence(item);
+  if (sentence && sentence.zh.length >= 3) types.push('builder');
+  return types;
+}
+function pickQuestionType(item) {
+  const avail = eligibleTypes(item);
+  if (avail.length === 0) return 'flashcard';
 
-    const FEEDBACK_MSG = {
-      correct: {
-        1: { en: ['Good!', 'Nice!'], zh: ['好!', '不错!'] },
-        2: { en: ['Great!', 'Well done!'], zh: ['太棒了!', '真棒!'] },
-        3: { en: ['Perfect!', 'Amazing!'], zh: ['完美!', '厉害!'] }
-      },
-      wrong: { en: ['Almost! Keep going.', 'Not quite — you got this.'], zh: ['再试试!', '没关系,继续加油!'] }
-    };
-    function pickFeedback(isCorrect, streak) {
+  if (quizQuestionTypeChoice && quizQuestionTypeChoice !== 'mixed') {
+    if (avail.includes(quizQuestionTypeChoice)) return quizQuestionTypeChoice;
+    return avail[0]; // fallback if chosen type isn't eligible for this item
+  }
+  // mixed: weighted pool (mc appears twice for higher weight)
+  const weighted = [];
+  if (avail.includes('mc')) weighted.push('mc', 'mc');
+  if (avail.includes('listening')) weighted.push('listening');
+  if (avail.includes('fillblank')) weighted.push('fillblank');
+  if (avail.includes('builder')) weighted.push('builder');
+  return weighted[Math.floor(Math.random() * weighted.length)];
+}
+
+function renderOptions(container, correctItem, optionLabelFn, onPick) {
+  const distractors = getDistractors(correctItem, 3);
+  const options = distractors.concat([correctItem]).sort(() => Math.random() - 0.5);
+  const optsBox = document.createElement('div');
+  optsBox.className = 'qz-options';
+  options.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.className = 'qz-opt-btn';
+    btn.innerHTML = optionLabelFn(opt);
+    btn.onclick = () => {
+      optsBox.querySelectorAll('.qz-opt-btn').forEach(b => b.disabled = true);
+      const isCorrect = getUid(opt) === getUid(correctItem);
+      btn.classList.add(isCorrect ? 'correct' : 'wrong');
       if (!isCorrect) {
-        const arr = FEEDBACK_MSG.wrong[quizFeedbackLang];
-        return arr[Math.floor(Math.random() * arr.length)];
+        Array.from(optsBox.children).forEach((b, i) => {
+          if (getUid(options[i]) === getUid(correctItem)) b.classList.add('correct');
+        });
       }
-      const tier = streak >= 4 ? 3 : (streak >= 2 ? 2 : 1);
-      const arr = FEEDBACK_MSG.correct[tier][quizFeedbackLang];
-      return arr[Math.floor(Math.random() * arr.length)];
-    }
-    const QUIZ_SPEED_RATES = { slow: 0.6, normal: 0.95, fast: 1.3 };
-    function speakFeedback(text) {
-      if (!('speechSynthesis' in window)) return;
-      const u = new SpeechSynthesisUtterance(text);
-      if (quizFeedbackLang === 'zh') {
-        u.lang = 'zh-CN';
-        if (quizWordVoice) u.voice = quizWordVoice;
-      } else {
-        u.lang = 'en-US';
-      }
-      u.rate = QUIZ_SPEED_RATES[quizSpeed] || 0.95;
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    }
-    function quizSpeak(text) {
-      if (!('speechSynthesis' in window)) return;
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'zh-CN';
-      if (quizWordVoice) u.voice = quizWordVoice;
-      u.rate = QUIZ_SPEED_RATES[quizSpeed] || 0.95;
-      speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    }
-    function populateQuizVoices() {
-      if (!('speechSynthesis' in window)) return;
-      quizVoiceList = speechSynthesis.getVoices().filter(v => v.lang && v.lang.toLowerCase().startsWith('zh'));
-      const sel = document.getElementById('qzVoiceSelect');
-      if (!sel) return;
-      if (quizVoiceList.length === 0) {
-        sel.innerHTML = `<option value="">No Chinese voice found</option>`;
-        return;
-      }
-      sel.innerHTML = quizVoiceList.map((v, i) => `<option value="${i}">${guessLabel(v, i)}</option>`).join('');
-      if (!quizWordVoice) quizWordVoice = quizVoiceList[0];
-      const idx = quizVoiceList.indexOf(quizWordVoice);
-      sel.value = idx >= 0 ? idx : 0;
-    }
+      onPick(isCorrect);
+    };
+    optsBox.appendChild(btn);
+  });
+  container.appendChild(optsBox);
+}
 
-    /* ---- Chime sound effect (Web Audio API, no external file) ---- */
-    let audioCtx = null;
-    function getAudioCtx() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      return audioCtx;
-    }
-    function playTone(freq, startTime, duration, gainPeak) {
-      const ctx = getAudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0, startTime);
-      gain.gain.linearRampToValueAtTime(gainPeak, startTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    }
-    function playChime(isCorrect, streak) {
-      try {
-        const ctx = getAudioCtx();
-        const now = ctx.currentTime;
-        if (isCorrect) {
-          const notes = streak >= 4 ? [523, 659, 784, 1047] : (streak >= 2 ? [523, 659, 784] : [523, 659]);
-          notes.forEach((f, i) => playTone(f, now + i * 0.09, 0.22, 0.12));
-        } else {
-          playTone(220, now, 0.28, 0.08);
-          playTone(196, now + 0.12, 0.3, 0.07);
-        }
-      } catch (e) { /* audio context unavailable, skip silently */ }
-    }
+function renderSentenceBuilder(container, sentence, onComplete) {
+  if (!sentence) { onComplete(true); return; }
+  // Strip trailing punctuation for the target character sequence, keep it separately to re-append
+  const punctMatch = sentence.zh.match(/[。！？，、]+$/);
+  const punct = punctMatch ? punctMatch[0] : '';
+  const coreZh = punct ? sentence.zh.slice(0, -punct.length) : sentence.zh;
+  const chars = coreZh.split('');
+  const shuffled = chars.map((c, i) => ({ c, id: i })).sort(() => Math.random() - 0.5);
 
+  // Best-effort per-character pinyin: split sentence pinyin by spaces; if the syllable
+  // count matches character count, map 1:1; otherwise fall back to showing the full pinyin.
+  const pySyllables = (sentence.py || '').trim().split(/\s+/);
+  const charPinyin = chars.map((c, i) => pySyllables.length === chars.length ? pySyllables[i] : sentence.py);
 
-    function getDistractors(correctItem, n) {
-      const pool = quizFullScope.filter(it => getUid(it) !== getUid(correctItem));
-      const shuffled = pool.slice().sort(() => Math.random() - 0.5);
-      return shuffled.slice(0, n);
-    }
-
-    function updateStatsUI() {
-      document.getElementById('qzCorrectCount').textContent = quizCorrect;
-      document.getElementById('qzWrongCount').textContent = quizWrong;
-      document.getElementById('qzStreak').textContent = quizStreak;
-      document.getElementById('qzScore').textContent = quizScore;
-      document.getElementById('quizProgress').textContent = `${quizIndex + 1} / ${quizPool.length}`;
-      const pct = ((quizIndex) / quizPool.length) * 100;
-      document.getElementById('quizProgressFill').style.width = pct + '%';
-      const ring = document.getElementById('quizRingFill');
-      const circumference = 106.8;
-      ring.style.strokeDashoffset = circumference - (circumference * pct / 100);
-    }
-
-    function showFeedback(isCorrect) {
-      const toast = document.getElementById('quizFeedbackToast');
-      const msg = pickFeedback(isCorrect, quizStreak);
-      toast.textContent = (isCorrect ? '🎉 ' : '💛 ') + msg;
-      toast.className = 'qz-feedback-toast show ' + (isCorrect ? 'correct-tone' : 'wrong-tone');
-      speakFeedback(msg);
-      playChime(isCorrect, quizStreak);
-      setTimeout(() => { toast.classList.remove('show'); }, 1100);
-    }
-
-    function showXpPopup(points) {
-      const el = document.getElementById('quizXpPopup');
-      el.textContent = '+' + points + ' XP';
-      el.classList.remove('animate');
-      void el.offsetWidth; // restart animation
-      el.classList.add('animate');
-    }
-
-    let quizOutOfHearts = false;
-    function registerAnswer(item, isCorrect) {
-      if (isCorrect) {
-        quizCorrect++; quizStreak++;
-        const pts = 10 + Math.min(quizStreak, 5) * 2;
-        quizScore += pts;
-        showXpPopup(pts);
-      } else {
-        quizWrong++; quizStreak = 0;
-        quizWrongItems.push(item);
-        if (quizHeartsEnabled) {
-          quizHearts = Math.max(0, quizHearts - 1);
-          renderHearts();
-          if (quizHearts === 0) quizOutOfHearts = true;
-        }
-      }
-      showFeedback(isCorrect);
-      updateStatsUI();
-    }
-
-    function nextQuizQuestion() {
-      if (quizOutOfHearts) { showQuizSummary(); return; }
-      quizIndex++;
-      if (quizIndex >= quizPool.length) {
-        showQuizSummary();
-        return;
-      }
-      showQuizCard();
-    }
-
-    function getBuilderSentence(item) {
-      if (item.usage && item.usage.length && item.usage[0].examples && item.usage[0].examples.length) {
-        return item.usage[0].examples[0];
-      }
-      if (item.ex && item.ex.length) return item.ex[0];
-      return null;
-    }
-    function eligibleTypes(item) {
-      const types = [];
-      if (quizFullScope.length >= 2) types.push('mc', 'listening');
-      const hasFillSource = item.usage && item.usage.length && item.usage[0].examples && item.usage[0].examples.length;
-      if (hasFillSource) types.push('fillblank');
-      const sentence = getBuilderSentence(item);
-      if (sentence && sentence.zh.length >= 3) types.push('builder');
-      return types;
-    }
-    function pickQuestionType(item) {
-      const avail = eligibleTypes(item);
-      if (avail.length === 0) return 'flashcard';
-
-      if (quizQuestionTypeChoice && quizQuestionTypeChoice !== 'mixed') {
-        if (avail.includes(quizQuestionTypeChoice)) return quizQuestionTypeChoice;
-        return avail[0]; // fallback if chosen type isn't eligible for this item
-      }
-      // mixed: weighted pool (mc appears twice for higher weight)
-      const weighted = [];
-      if (avail.includes('mc')) weighted.push('mc', 'mc');
-      if (avail.includes('listening')) weighted.push('listening');
-      if (avail.includes('fillblank')) weighted.push('fillblank');
-      if (avail.includes('builder')) weighted.push('builder');
-      return weighted[Math.floor(Math.random() * weighted.length)];
-    }
-
-    function renderOptions(container, correctItem, optionLabelFn, onPick) {
-      const distractors = getDistractors(correctItem, 3);
-      const options = distractors.concat([correctItem]).sort(() => Math.random() - 0.5);
-      const optsBox = document.createElement('div');
-      optsBox.className = 'qz-options';
-      options.forEach(opt => {
-        const btn = document.createElement('button');
-        btn.className = 'qz-opt-btn';
-        btn.innerHTML = optionLabelFn(opt);
-        btn.onclick = () => {
-          optsBox.querySelectorAll('.qz-opt-btn').forEach(b => b.disabled = true);
-          const isCorrect = getUid(opt) === getUid(correctItem);
-          btn.classList.add(isCorrect ? 'correct' : 'wrong');
-          if (!isCorrect) {
-            Array.from(optsBox.children).forEach((b, i) => {
-              if (getUid(options[i]) === getUid(correctItem)) b.classList.add('correct');
-            });
-          }
-          onPick(isCorrect);
-        };
-        optsBox.appendChild(btn);
-      });
-      container.appendChild(optsBox);
-    }
-
-    function renderSentenceBuilder(container, sentence, onComplete) {
-      if (!sentence) { onComplete(true); return; }
-      // Strip trailing punctuation for the target character sequence, keep it separately to re-append
-      const punctMatch = sentence.zh.match(/[。！？，、]+$/);
-      const punct = punctMatch ? punctMatch[0] : '';
-      const coreZh = punct ? sentence.zh.slice(0, -punct.length) : sentence.zh;
-      const chars = coreZh.split('');
-      const shuffled = chars.map((c, i) => ({ c, id: i })).sort(() => Math.random() - 0.5);
-
-      // Best-effort per-character pinyin: split sentence pinyin by spaces; if the syllable
-      // count matches character count, map 1:1; otherwise fall back to showing the full pinyin.
-      const pySyllables = (sentence.py || '').trim().split(/\s+/);
-      const charPinyin = chars.map((c, i) => pySyllables.length === chars.length ? pySyllables[i] : sentence.py);
-
-      container.innerHTML = `<div class="qz-question-type-label"><span data-lang-el="bn">বাক্যটি সাজান</span><span data-lang-el="en">Arrange the sentence</span> <span class="qz-type-tag">[Sentence Builder]</span></div>
+  container.innerHTML = `<div class="qz-question-type-label"><span data-lang-el="bn">বাক্যটি সাজান</span><span data-lang-el="en">Arrange the sentence</span> <span class="qz-type-tag">[Sentence Builder]</span></div>
         <div class="qz-prompt-py" style="text-align:center;"><span data-lang-el="bn">${sentence.bn}</span><span data-lang-el="en">${sentence.en}</span></div>
         <div class="qz-builder-strip" id="qzBuilderStrip"></div>
         <div class="qz-word-bank" id="qzWordBank"></div>
         <button class="qz-check-btn" id="qzCheckBtn" disabled><span data-lang-el="bn">চেক করুন ✓</span><span data-lang-el="en">Check ✓</span></button>`;
 
-      const strip = document.getElementById('qzBuilderStrip');
-      const bank = document.getElementById('qzWordBank');
-      const checkBtn = document.getElementById('qzCheckBtn');
-      let placedOrder = [];
+  const strip = document.getElementById('qzBuilderStrip');
+  const bank = document.getElementById('qzWordBank');
+  const checkBtn = document.getElementById('qzCheckBtn');
+  let placedOrder = [];
 
-      function renderBank() {
-        bank.innerHTML = '';
-        shuffled.forEach(tok => {
-          const chip = document.createElement('button');
-          chip.className = 'qz-word-chip' + (placedOrder.includes(tok.id) ? ' placed' : '');
-          chip.textContent = tok.c;
-          chip.title = charPinyin[tok.id];
-          chip.onmouseenter = () => quizSpeak(tok.c);
-          chip.onclick = () => {
-            if (placedOrder.includes(tok.id)) return;
-            placedOrder.push(tok.id);
-            renderStrip(); renderBank();
-            checkBtn.disabled = placedOrder.length !== chars.length;
-          };
-          bank.appendChild(chip);
-        });
-      }
-      function renderStrip() {
-        strip.innerHTML = '';
-        strip.classList.toggle('filled', placedOrder.length > 0);
-        placedOrder.forEach((id, pos) => {
-          const chip = document.createElement('button');
-          chip.className = 'qz-strip-chip';
-          chip.textContent = chars[id];
-          chip.title = charPinyin[id];
-          chip.onmouseenter = () => quizSpeak(chars[id]);
-          chip.onclick = () => {
-            placedOrder = placedOrder.filter(x => x !== id);
-            renderStrip(); renderBank();
-            checkBtn.disabled = true;
-          };
-          strip.appendChild(chip);
-        });
-      }
-      renderBank(); renderStrip();
-
-      checkBtn.onclick = () => {
-        const userOrder = placedOrder.map(id => chars[id]).join('');
-        const isCorrect = userOrder === coreZh;
-        checkBtn.disabled = true;
-        bank.querySelectorAll('.qz-word-chip').forEach(b => b.disabled = true);
-        strip.querySelectorAll('.qz-strip-chip').forEach(b => b.disabled = true);
-        if (!isCorrect) {
-          strip.innerHTML += `<div style="width:100%; margin-top:8px; font-size:13px; color:var(--seal);">
-            <span data-lang-el="bn">সঠিক উত্তর:</span><span data-lang-el="en">Correct answer:</span> ${sentence.zh}</div>`;
-        }
-        onComplete(isCorrect);
+  function renderBank() {
+    bank.innerHTML = '';
+    shuffled.forEach(tok => {
+      const chip = document.createElement('button');
+      chip.className = 'qz-word-chip' + (placedOrder.includes(tok.id) ? ' placed' : '');
+      chip.textContent = tok.c;
+      chip.title = charPinyin[tok.id];
+      chip.onmouseenter = () => quizSpeak(tok.c);
+      chip.onclick = () => {
+        if (placedOrder.includes(tok.id)) return;
+        placedOrder.push(tok.id);
+        renderStrip(); renderBank();
+        checkBtn.disabled = placedOrder.length !== chars.length;
       };
+      bank.appendChild(chip);
+    });
+  }
+  function renderStrip() {
+    strip.innerHTML = '';
+    strip.classList.toggle('filled', placedOrder.length > 0);
+    placedOrder.forEach((id, pos) => {
+      const chip = document.createElement('button');
+      chip.className = 'qz-strip-chip';
+      chip.textContent = chars[id];
+      chip.title = charPinyin[id];
+      chip.onmouseenter = () => quizSpeak(chars[id]);
+      chip.onclick = () => {
+        placedOrder = placedOrder.filter(x => x !== id);
+        renderStrip(); renderBank();
+        checkBtn.disabled = true;
+      };
+      strip.appendChild(chip);
+    });
+  }
+  renderBank(); renderStrip();
+
+  checkBtn.onclick = () => {
+    const userOrder = placedOrder.map(id => chars[id]).join('');
+    const isCorrect = userOrder === coreZh;
+    checkBtn.disabled = true;
+    bank.querySelectorAll('.qz-word-chip').forEach(b => b.disabled = true);
+    strip.querySelectorAll('.qz-strip-chip').forEach(b => b.disabled = true);
+    if (!isCorrect) {
+      strip.innerHTML += `<div style="width:100%; margin-top:8px; font-size:13px; color:var(--seal);">
+            <span data-lang-el="bn">সঠিক উত্তর:</span><span data-lang-el="en">Correct answer:</span> ${sentence.zh}</div>`;
     }
+    onComplete(isCorrect);
+  };
+}
 
-    function showQuizCard() {
-      updateStatsUI();
-      const item = quizPool[quizIndex];
-      const area = document.getElementById('quizQuestionArea');
-      area.innerHTML = '';
-      const type = pickQuestionType(item);
+function showQuizCard() {
+  updateStatsUI();
+  const item = quizPool[quizIndex];
+  const area = document.getElementById('quizQuestionArea');
+  area.innerHTML = '';
+  const type = pickQuestionType(item);
 
-      if (type === 'mc') {
-        area.innerHTML = `<div class="qz-question-type-label"><span data-lang-el="bn">শব্দ চিনুন</span><span data-lang-el="en">Recognize the word</span> <span class="qz-type-tag">[Multiple Choice]</span></div>
+  if (type === 'mc') {
+    area.innerHTML = `<div class="qz-question-type-label"><span data-lang-el="bn">শব্দ চিনুন</span><span data-lang-el="en">Recognize the word</span> <span class="qz-type-tag">[Multiple Choice]</span></div>
           <div class="qz-prompt-zh zh">${item.zh}</div>
           <div class="qz-prompt-py">${toneColorPinyin(item.py)}</div>`;
-        renderOptions(area, item, (opt) => `<span data-lang-el="bn">${opt.bn}</span><span data-lang-el="en">${opt.en}</span>`, (isCorrect) => {
-          registerAnswer(item, isCorrect);
-          setTimeout(nextQuizQuestion, 1300);
-        });
-      } else if (type === 'listening') {
-        area.innerHTML = `<div class="qz-question-type-label"><span data-lang-el="bn">শুনে বেছে নিন</span><span data-lang-el="en">Listen and choose</span> <span class="qz-type-tag">[Listening]</span></div>`;
-        const btn = document.createElement('button');
-        btn.className = 'qz-listen-btn';
-        btn.textContent = '🔊';
-        btn.onclick = () => quizSpeak(item.zh);
-        area.appendChild(btn);
-        setTimeout(() => quizSpeak(item.zh), 300);
-        renderOptions(area, item, (opt) => `<span data-lang-el="bn">${opt.bn}</span><span data-lang-el="en">${opt.en}</span>`, (isCorrect) => {
-          registerAnswer(item, isCorrect);
-          setTimeout(nextQuizQuestion, 1300);
-        });
-      } else if (type === 'fillblank') {
-        const ex = item.usage[0].examples[0];
-        const blanked = ex.zh.split(item.zh).join('___');
-        area.innerHTML = `<div class="qz-question-type-label"><span data-lang-el="bn">ফাঁকা স্থান পূরণ করুন</span><span data-lang-el="en">Fill in the blank</span> <span class="qz-type-tag">[Fill-in-blank]</span></div>
+    renderOptions(area, item, (opt) => `<span data-lang-el="bn">${opt.bn}</span><span data-lang-el="en">${opt.en}</span>`, (isCorrect) => {
+      registerAnswer(item, isCorrect);
+      setTimeout(nextQuizQuestion, 1300);
+    });
+  } else if (type === 'listening') {
+    area.innerHTML = `<div class="qz-question-type-label"><span data-lang-el="bn">শুনে বেছে নিন</span><span data-lang-el="en">Listen and choose</span> <span class="qz-type-tag">[Listening]</span></div>`;
+    const btn = document.createElement('button');
+    btn.className = 'qz-listen-btn';
+    btn.textContent = '🔊';
+    btn.onclick = () => quizSpeak(item.zh);
+    area.appendChild(btn);
+    setTimeout(() => quizSpeak(item.zh), 300);
+    renderOptions(area, item, (opt) => `<span data-lang-el="bn">${opt.bn}</span><span data-lang-el="en">${opt.en}</span>`, (isCorrect) => {
+      registerAnswer(item, isCorrect);
+      setTimeout(nextQuizQuestion, 1300);
+    });
+  } else if (type === 'fillblank') {
+    const ex = item.usage[0].examples[0];
+    const blanked = ex.zh.split(item.zh).join('___');
+    area.innerHTML = `<div class="qz-question-type-label"><span data-lang-el="bn">ফাঁকা স্থান পূরণ করুন</span><span data-lang-el="en">Fill in the blank</span> <span class="qz-type-tag">[Fill-in-blank]</span></div>
           <div class="qz-sentence zh">${blanked.replace('___', '<span class="blank">___</span>')}</div>
           <div class="qz-prompt-py">${toneColorPinyin(ex.py)}</div>`;
-        renderOptions(area, item, (opt) => `<span class="zh">${opt.zh}</span>`, (isCorrect) => {
-          registerAnswer(item, isCorrect);
-          setTimeout(nextQuizQuestion, 1300);
-        });
-      } else if (type === 'builder') {
-        const sentence = getBuilderSentence(item);
-        renderSentenceBuilder(area, sentence, (isCorrect) => {
-          registerAnswer(item, isCorrect);
-          setTimeout(nextQuizQuestion, 1500);
-        });
-      } else {
-        // flashcard fallback (small pools)
-        area.innerHTML = `<div class="qz-question-type-label"><span data-lang-el="bn">নিজে যাচাই করুন</span><span data-lang-el="en">Self-check</span> <span class="qz-type-tag">[Flashcard]</span></div>
+    renderOptions(area, item, (opt) => `<span class="zh">${opt.zh}</span>`, (isCorrect) => {
+      registerAnswer(item, isCorrect);
+      setTimeout(nextQuizQuestion, 1300);
+    });
+  } else if (type === 'builder') {
+    const sentence = getBuilderSentence(item);
+    renderSentenceBuilder(area, sentence, (isCorrect) => {
+      registerAnswer(item, isCorrect);
+      setTimeout(nextQuizQuestion, 1500);
+    });
+  } else {
+    // flashcard fallback (small pools)
+    area.innerHTML = `<div class="qz-question-type-label"><span data-lang-el="bn">নিজে যাচাই করুন</span><span data-lang-el="en">Self-check</span> <span class="qz-type-tag">[Flashcard]</span></div>
           <div class="qz-prompt-zh zh">${item.zh}</div>
           <div class="qz-prompt-py">${toneColorPinyin(item.py)}</div>
           <div class="flash-answer show" style="text-align:center;"><strong data-lang-el="bn">${item.bn}</strong><strong data-lang-el="en">${item.en}</strong></div>
@@ -86006,26 +86096,26 @@ const DATA = {
             <button class="qz-know-btn"><span data-lang-el="bn">জানতাম ✓</span><span data-lang-el="en">Knew it ✓</span></button>
             <button class="qz-dontknow-btn"><span data-lang-el="bn">জানতাম না ✗</span><span data-lang-el="en">Didn't know ✗</span></button>
           </div>`;
-        area.querySelector('.qz-know-btn').onclick = () => { registerAnswer(item, true); setTimeout(nextQuizQuestion, 900); };
-        area.querySelector('.qz-dontknow-btn').onclick = () => { registerAnswer(item, false); setTimeout(nextQuizQuestion, 900); };
-      }
-    }
+    area.querySelector('.qz-know-btn').onclick = () => { registerAnswer(item, true); setTimeout(nextQuizQuestion, 900); };
+    area.querySelector('.qz-dontknow-btn').onclick = () => { registerAnswer(item, false); setTimeout(nextQuizQuestion, 900); };
+  }
+}
 
-    function showQuizSummary() {
-      document.getElementById('quizQuestionArea').style.display = 'none';
-      const total = quizCorrect + quizWrong;
-      const acc = total ? Math.round((quizCorrect / total) * 100) : 0;
-      const summaryBox = document.getElementById('quizSummaryArea');
-      summaryBox.style.display = 'block';
-      // Dedupe by uid in case the same item was answered wrong more than once in this session
-      const seenUid = new Set();
-      const weakArr = quizWrongItems.filter(it => {
-        const uid = getUid(it);
-        if (seenUid.has(uid)) return false;
-        seenUid.add(uid);
-        return true;
-      });
-      summaryBox.innerHTML = `<div class="qz-summary">
+function showQuizSummary() {
+  document.getElementById('quizQuestionArea').style.display = 'none';
+  const total = quizCorrect + quizWrong;
+  const acc = total ? Math.round((quizCorrect / total) * 100) : 0;
+  const summaryBox = document.getElementById('quizSummaryArea');
+  summaryBox.style.display = 'block';
+  // Dedupe by uid in case the same item was answered wrong more than once in this session
+  const seenUid = new Set();
+  const weakArr = quizWrongItems.filter(it => {
+    const uid = getUid(it);
+    if (seenUid.has(uid)) return false;
+    seenUid.add(uid);
+    return true;
+  });
+  summaryBox.innerHTML = `<div class="qz-summary">
         <div style="font-size:15px;font-weight:700;">${quizOutOfHearts ? '💔 ' : (acc === 100 ? '🏆 ' : '')}<span data-lang-el="bn">${quizOutOfHearts ? 'হার্ট শেষ! আবার চেষ্টা করুন' : 'ফলাফল'}</span><span data-lang-el="en">${quizOutOfHearts ? 'Out of hearts! Try again' : 'Result'}</span></div>
         <div class="qzs-score">⭐ ${quizScore}</div>
         <div>${quizCorrect} ✅ &nbsp; ${quizWrong} ❌ &nbsp; ${acc}% <span data-lang-el="bn">সঠিক</span><span data-lang-el="en">accuracy</span></div>
@@ -86036,221 +86126,221 @@ const DATA = {
           <button id="qzCloseSummaryBtn">✕ <span data-lang-el="bn">বন্ধ করুন</span><span data-lang-el="en">Close</span></button>
         </div>
       </div>`;
-      const retryBtn = document.getElementById('qzRetryWeakBtn');
-      if (retryBtn) retryBtn.onclick = () => {
-        // Directly reuse the exact wrong items — no re-derivation, no ambiguity
-        startQuiz(weakArr.slice(), document.getElementById('quizScopeLabel').textContent, 'mixed', 'all');
-      };
-      document.getElementById('qzCloseSummaryBtn').onclick = () => { document.getElementById('quizModal').classList.remove('show'); quizWrongItems = []; };
-    }
+  const retryBtn = document.getElementById('qzRetryWeakBtn');
+  if (retryBtn) retryBtn.onclick = () => {
+    // Directly reuse the exact wrong items — no re-derivation, no ambiguity
+    startQuiz(weakArr.slice(), document.getElementById('quizScopeLabel').textContent, 'mixed', 'all');
+  };
+  document.getElementById('qzCloseSummaryBtn').onclick = () => { document.getElementById('quizModal').classList.remove('show'); quizWrongItems = []; };
+}
 
-    function renderHearts() {
-      const box = document.getElementById('quizHeartsBox');
-      if (!quizHeartsEnabled) { box.innerHTML = ''; return; }
-      let html = '';
-      for (let i = 0; i < 5; i++) {
-        html += i < quizHearts ? '❤️' : '<span class="heart-lost">🖤</span>';
-      }
-      box.innerHTML = html;
-    }
-    function startQuiz(scopeItems, label, typeOverride, batchOverride) {
-      if (!scopeItems || scopeItems.length === 0) return;
-      const effectiveType = typeOverride !== undefined ? typeOverride : quizQuestionTypeChoice;
-      const effectiveBatch = batchOverride !== undefined ? batchOverride : quizBatchSize;
-      quizQuestionTypeChoice = effectiveType; // keep module state in sync for pickQuestionType/UI
-      quizBatchSize = effectiveBatch;
+function renderHearts() {
+  const box = document.getElementById('quizHeartsBox');
+  if (!quizHeartsEnabled) { box.innerHTML = ''; return; }
+  let html = '';
+  for (let i = 0; i < 5; i++) {
+    html += i < quizHearts ? '❤️' : '<span class="heart-lost">🖤</span>';
+  }
+  box.innerHTML = html;
+}
+function startQuiz(scopeItems, label, typeOverride, batchOverride) {
+  if (!scopeItems || scopeItems.length === 0) return;
+  const effectiveType = typeOverride !== undefined ? typeOverride : quizQuestionTypeChoice;
+  const effectiveBatch = batchOverride !== undefined ? batchOverride : quizBatchSize;
+  quizQuestionTypeChoice = effectiveType; // keep module state in sync for pickQuestionType/UI
+  quizBatchSize = effectiveBatch;
 
-      quizFullScope = scopeItems; // full scope kept for building multiple-choice distractors
-      let poolSource = scopeItems;
-      if (effectiveType && effectiveType !== 'mixed') {
-        const filtered = scopeItems.filter(it => {
-          if (effectiveType === 'mc' || effectiveType === 'listening') return scopeItems.length >= 4;
-          if (effectiveType === 'fillblank') return !!(it.usage && it.usage.length && it.usage[0].examples && it.usage[0].examples.length);
-          if (effectiveType === 'builder') { const s = getBuilderSentence(it); return !!(s && s.zh.length >= 3); }
-          return true;
-        });
-        if (filtered.length > 0) poolSource = filtered;
-        // if nothing qualifies, fall back to the full scope (pickQuestionType will pick the closest available type per item)
-      }
-      buildQuizPool(poolSource);
-      quizScore = 0; quizCorrect = 0; quizWrong = 0; quizStreak = 0; quizWrongItems = [];
-      quizHearts = 5;
-      quizOutOfHearts = false;
-      renderHearts();
-      document.getElementById('quizQuestionArea').style.display = 'block';
-      document.getElementById('quizSummaryArea').style.display = 'none';
-      document.getElementById('quizModal').classList.add('show');
-      document.getElementById('quizScopeLabel').textContent = label || '';
-      showQuizCard();
-    }
-    document.getElementById('quizClose').onclick = () => { document.getElementById('quizModal').classList.remove('show'); quizWrongItems = []; };
-    document.getElementById('quizSettingsBtn').onclick = (e) => {
-      e.stopPropagation();
-      document.getElementById('quizSettingsPanel').classList.toggle('show');
-    };
-    document.addEventListener('click', (e) => {
-      const panel = document.getElementById('quizSettingsPanel');
-      if (panel && !panel.contains(e.target) && e.target.id !== 'quizSettingsBtn') panel.classList.remove('show');
+  quizFullScope = scopeItems; // full scope kept for building multiple-choice distractors
+  let poolSource = scopeItems;
+  if (effectiveType && effectiveType !== 'mixed') {
+    const filtered = scopeItems.filter(it => {
+      if (effectiveType === 'mc' || effectiveType === 'listening') return scopeItems.length >= 4;
+      if (effectiveType === 'fillblank') return !!(it.usage && it.usage.length && it.usage[0].examples && it.usage[0].examples.length);
+      if (effectiveType === 'builder') { const s = getBuilderSentence(it); return !!(s && s.zh.length >= 3); }
+      return true;
     });
-    document.querySelectorAll('.qz-lang-opt').forEach(btn => {
-      btn.onclick = () => {
-        quizFeedbackLang = btn.dataset.lang;
-        document.querySelectorAll('.qz-lang-opt').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      };
-    });
-    document.querySelectorAll('.qz-speed-btn').forEach(btn => {
-      btn.onclick = () => {
-        quizSpeed = btn.dataset.speed;
-        document.querySelectorAll('.qz-speed-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-      };
-    });
-    const qzVoiceSelectEl = document.getElementById('qzVoiceSelect');
-    if (qzVoiceSelectEl) qzVoiceSelectEl.onchange = () => {
-      quizWordVoice = quizVoiceList[parseInt(qzVoiceSelectEl.value)];
-    };
-    if ('speechSynthesis' in window) {
-      const prevOnVoices = speechSynthesis.onvoiceschanged;
-      speechSynthesis.onvoiceschanged = () => { if (prevOnVoices) prevOnVoices(); populateQuizVoices(); };
-      populateQuizVoices();
-    }
-    document.getElementById('floatingQuizBtn').onclick = () => {
-      const panel = document.querySelector('.quiz-panel');
-      if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    };
+    if (filtered.length > 0) poolSource = filtered;
+    // if nothing qualifies, fall back to the full scope (pickQuestionType will pick the closest available type per item)
+  }
+  buildQuizPool(poolSource);
+  quizScore = 0; quizCorrect = 0; quizWrong = 0; quizStreak = 0; quizWrongItems = [];
+  quizHearts = 5;
+  quizOutOfHearts = false;
+  renderHearts();
+  document.getElementById('quizQuestionArea').style.display = 'block';
+  document.getElementById('quizSummaryArea').style.display = 'none';
+  document.getElementById('quizModal').classList.add('show');
+  document.getElementById('quizScopeLabel').textContent = label || '';
+  showQuizCard();
+}
+document.getElementById('quizClose').onclick = () => { document.getElementById('quizModal').classList.remove('show'); quizWrongItems = []; };
+document.getElementById('quizSettingsBtn').onclick = (e) => {
+  e.stopPropagation();
+  document.getElementById('quizSettingsPanel').classList.toggle('show');
+};
+document.addEventListener('click', (e) => {
+  const panel = document.getElementById('quizSettingsPanel');
+  if (panel && !panel.contains(e.target) && e.target.id !== 'quizSettingsBtn') panel.classList.remove('show');
+});
+document.querySelectorAll('.qz-lang-opt').forEach(btn => {
+  btn.onclick = () => {
+    quizFeedbackLang = btn.dataset.lang;
+    document.querySelectorAll('.qz-lang-opt').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  };
+});
+document.querySelectorAll('.qz-speed-btn').forEach(btn => {
+  btn.onclick = () => {
+    quizSpeed = btn.dataset.speed;
+    document.querySelectorAll('.qz-speed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  };
+});
+const qzVoiceSelectEl = document.getElementById('qzVoiceSelect');
+if (qzVoiceSelectEl) qzVoiceSelectEl.onchange = () => {
+  quizWordVoice = quizVoiceList[parseInt(qzVoiceSelectEl.value)];
+};
+if ('speechSynthesis' in window) {
+  const prevOnVoices = speechSynthesis.onvoiceschanged;
+  speechSynthesis.onvoiceschanged = () => { if (prevOnVoices) prevOnVoices(); populateQuizVoices(); };
+  populateQuizVoices();
+}
+document.getElementById('floatingQuizBtn').onclick = () => {
+  const panel = document.querySelector('.quiz-panel');
+  if (panel) panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
 
-    /* ---- Floating toolbar (compact circular controls that appear once the header scrolls out of view) ---- */
-    (function setupFloatingToolbarScroll() {
-      const toolbar = document.getElementById('floatToolbar');
-      const appPage = document.getElementById('pageApp');
-      const SHOW_AFTER_PX = 140; // scroll distance before floating icons appear
-      function check() {
-        if (appPage.style.display === 'none') { toolbar.classList.remove('show'); return; }
-        const y = window.scrollY || document.documentElement.scrollTop || 0;
-        toolbar.classList.toggle('show', y > SHOW_AFTER_PX);
-      }
-      window.addEventListener('scroll', check, { passive: true });
-      window.addEventListener('resize', check);
-      const origNavigateTo = navigateTo;
-      navigateTo = function (page) { origNavigateTo(page); setTimeout(check, 50); };
-      check();
-    })();
+/* ---- Floating toolbar (compact circular controls that appear once the header scrolls out of view) ---- */
+(function setupFloatingToolbarScroll() {
+  const toolbar = document.getElementById('floatToolbar');
+  const appPage = document.getElementById('pageApp');
+  const SHOW_AFTER_PX = 140; // scroll distance before floating icons appear
+  function check() {
+    if (appPage.style.display === 'none') { toolbar.classList.remove('show'); return; }
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    toolbar.classList.toggle('show', y > SHOW_AFTER_PX);
+  }
+  window.addEventListener('scroll', check, { passive: true });
+  window.addEventListener('resize', check);
+  const origNavigateTo = navigateTo;
+  navigateTo = function (page) { origNavigateTo(page); setTimeout(check, 50); };
+  check();
+})();
 
-    /* ================= SEARCH ================= */
-    document.getElementById('searchInput').addEventListener('input', (e) => renderCards(e.target.value));
-    document.getElementById('bookmarkFilterBtn').onclick = () => {
-      bookmarkFilterActive = !bookmarkFilterActive;
-      renderCards();
-    };
+/* ================= SEARCH ================= */
+document.getElementById('searchInput').addEventListener('input', (e) => renderCards(e.target.value));
+document.getElementById('bookmarkFilterBtn').onclick = () => {
+  bookmarkFilterActive = !bookmarkFilterActive;
+  renderCards();
+};
 
-    /* ================= THEME & LANGUAGE ================= */
-    function toggleTheme() {
-      const cur = document.body.getAttribute('data-theme');
-      const next = cur === 'dark' ? 'light' : 'dark';
-      document.body.setAttribute('data-theme', next);
-      saveTheme(next);
-    }
-    document.getElementById('themeBtn').onclick = toggleTheme;
-    document.getElementById('siteThemeBtn').onclick = toggleTheme;
-    function toggleLang() {
-      const cur = document.documentElement.getAttribute('data-lang');
-      const next = cur === 'bn' ? 'en' : 'bn';
-      document.documentElement.setAttribute('data-lang', next);
-      updateSearchPlaceholder(next);
-      saveLang(next);
-    }
-    document.getElementById('langBtn').onclick = toggleLang;
-    document.getElementById('floatLangBtn').onclick = toggleLang;
-    document.getElementById('floatThemeBtn').onclick = toggleTheme;
-    async function renderFloatVoiceDropdown() {
-      const dd = document.getElementById('floatVoiceDropdown');
-      if (!dd) return;
-      if (availableVoices.length === 0) {
-        dd.innerHTML = `<div class="empty-note">No Chinese voice detected on this browser/device.</div>`;
-        return;
-      }
-      dd.innerHTML = availableVoices.map((v, i) => {
-        const label = guessLabel(v, i);
-        const sel = selectedVoice && v.name === selectedVoice.name ? 'selected' : '';
-        return `<div class="voice-opt ${sel}" data-idx="${i}"><span>${label}</span><small>${v.lang}${sel ? ' · default' : ''}</small></div>`;
-      }).join('');
-      dd.querySelectorAll('.voice-opt').forEach(el => {
-        el.onclick = async () => {
-          selectedVoice = availableVoices[parseInt(el.dataset.idx)];
-          try { await window.storage.set('pref:voice', selectedVoice.name); } catch (e) { }
-          renderVoiceDropdown();
-          renderFloatVoiceDropdown();
-          dd.classList.remove('show');
-          speak('你好');
-        };
-      });
-    }
-    document.getElementById('floatVoiceBtn').onclick = (e) => {
-      e.stopPropagation();
+/* ================= THEME & LANGUAGE ================= */
+function toggleTheme() {
+  const cur = document.body.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.body.setAttribute('data-theme', next);
+  saveTheme(next);
+}
+document.getElementById('themeBtn').onclick = toggleTheme;
+document.getElementById('siteThemeBtn').onclick = toggleTheme;
+function toggleLang() {
+  const cur = document.documentElement.getAttribute('data-lang');
+  const next = cur === 'bn' ? 'en' : 'bn';
+  document.documentElement.setAttribute('data-lang', next);
+  updateSearchPlaceholder(next);
+  saveLang(next);
+}
+document.getElementById('langBtn').onclick = toggleLang;
+document.getElementById('floatLangBtn').onclick = toggleLang;
+document.getElementById('floatThemeBtn').onclick = toggleTheme;
+async function renderFloatVoiceDropdown() {
+  const dd = document.getElementById('floatVoiceDropdown');
+  if (!dd) return;
+  if (availableVoices.length === 0) {
+    dd.innerHTML = `<div class="empty-note">No Chinese voice detected on this browser/device.</div>`;
+    return;
+  }
+  dd.innerHTML = availableVoices.map((v, i) => {
+    const label = guessLabel(v, i);
+    const sel = selectedVoice && v.name === selectedVoice.name ? 'selected' : '';
+    return `<div class="voice-opt ${sel}" data-idx="${i}"><span>${label}</span><small>${v.lang}${sel ? ' · default' : ''}</small></div>`;
+  }).join('');
+  dd.querySelectorAll('.voice-opt').forEach(el => {
+    el.onclick = async () => {
+      selectedVoice = availableVoices[parseInt(el.dataset.idx)];
+      try { await window.storage.set('pref:voice', selectedVoice.name); } catch (e) { }
+      renderVoiceDropdown();
       renderFloatVoiceDropdown();
-      document.getElementById('floatVoiceDropdown').classList.toggle('show');
+      dd.classList.remove('show');
+      speak('你好');
     };
-    document.addEventListener('click', () => {
-      const fd = document.getElementById('floatVoiceDropdown');
-      if (fd) fd.classList.remove('show');
-    });
-    document.querySelectorAll('.float-speed-btn').forEach(btn => {
-      btn.onclick = async () => {
-        audioSpeed = btn.dataset.speed;
-        try { await window.storage.set('pref:speed', audioSpeed); } catch (e) { }
-        document.querySelectorAll('.float-speed-btn').forEach(b => b.classList.toggle('active', b === btn));
-        document.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b.dataset.speed === audioSpeed));
-      };
-    });
-    function updateSearchPlaceholder(lang) {
-      const inp = document.getElementById('searchInput');
-      inp.placeholder = lang === 'bn' ? 'খুঁজুন / 搜索 / pinyin...' : 'Search / 搜索 / pinyin...';
-    }
+  });
+}
+document.getElementById('floatVoiceBtn').onclick = (e) => {
+  e.stopPropagation();
+  renderFloatVoiceDropdown();
+  document.getElementById('floatVoiceDropdown').classList.toggle('show');
+};
+document.addEventListener('click', () => {
+  const fd = document.getElementById('floatVoiceDropdown');
+  if (fd) fd.classList.remove('show');
+});
+document.querySelectorAll('.float-speed-btn').forEach(btn => {
+  btn.onclick = async () => {
+    audioSpeed = btn.dataset.speed;
+    try { await window.storage.set('pref:speed', audioSpeed); } catch (e) { }
+    document.querySelectorAll('.float-speed-btn').forEach(b => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b.dataset.speed === audioSpeed));
+  };
+});
+function updateSearchPlaceholder(lang) {
+  const inp = document.getElementById('searchInput');
+  inp.placeholder = lang === 'bn' ? 'খুঁজুন / 搜索 / pinyin...' : 'Search / 搜索 / pinyin...';
+}
 
-    /* ================= MOBILE SIDEBAR ================= */
-    function closeSidebarMobile() {
-      document.getElementById('sidebar').classList.remove('open');
-      document.getElementById('backdrop').classList.remove('show');
-    }
-    function checkMobile() {
-      const isMobile = window.innerWidth <= 820;
-      document.getElementById('menuToggle').style.display = isMobile ? 'inline-flex' : 'none';
-    }
-    window.addEventListener('resize', checkMobile);
-    document.getElementById('menuToggle').onclick = () => {
-      document.getElementById('sidebar').classList.toggle('open');
-      document.getElementById('backdrop').classList.toggle('show');
-    };
-    document.getElementById('backdrop').onclick = closeSidebarMobile;
+/* ================= MOBILE SIDEBAR ================= */
+function closeSidebarMobile() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('backdrop').classList.remove('show');
+}
+function checkMobile() {
+  const isMobile = window.innerWidth <= 820;
+  document.getElementById('menuToggle').style.display = isMobile ? 'inline-flex' : 'none';
+}
+window.addEventListener('resize', checkMobile);
+document.getElementById('menuToggle').onclick = () => {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('backdrop').classList.toggle('show');
+};
+document.getElementById('backdrop').onclick = closeSidebarMobile;
 
-    /* ================= INIT ================= */
-    /* ================= SITE-WIDE MULTI-PAGE NAVIGATION ================= */
-    function getSiteStats() {
-      let totalWords = 0;
-      Object.keys(DATA).forEach(k => totalWords += DATA[k].items.length);
-      return {
-        totalWords,
-        totalCategories: Object.keys(DATA).length,
-        patternCount: DATA.pattern ? DATA.pattern.items.length : 0
-      };
-    }
+/* ================= INIT ================= */
+/* ================= SITE-WIDE MULTI-PAGE NAVIGATION ================= */
+function getSiteStats() {
+  let totalWords = 0;
+  Object.keys(DATA).forEach(k => totalWords += DATA[k].items.length);
+  return {
+    totalWords,
+    totalCategories: Object.keys(DATA).length,
+    patternCount: DATA.pattern ? DATA.pattern.items.length : 0
+  };
+}
 
-    function animateCounter(el, target, duration) {
-      const start = 0;
-      const startTime = performance.now();
-      function tick(now) {
-        const progress = Math.min((now - startTime) / duration, 1);
-        const val = Math.floor(start + (target - start) * progress);
-        el.textContent = val.toLocaleString();
-        if (progress < 1) requestAnimationFrame(tick);
-        else el.textContent = target.toLocaleString();
-      }
-      requestAnimationFrame(tick);
-    }
+function animateCounter(el, target, duration) {
+  const start = 0;
+  const startTime = performance.now();
+  function tick(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const val = Math.floor(start + (target - start) * progress);
+    el.textContent = val.toLocaleString();
+    if (progress < 1) requestAnimationFrame(tick);
+    else el.textContent = target.toLocaleString();
+  }
+  requestAnimationFrame(tick);
+}
 
-    function renderCourseCard(stats) {
-      return `<div class="course-card fade-in-up">
+function renderCourseCard(stats) {
+  return `<div class="course-card fade-in-up">
         <span class="cc-badge live">✅ LIVE</span>
         <h3 class="zh">流利中文</h3>
         <div>Fluent Spoken Chinese</div>
@@ -86267,102 +86357,102 @@ const DATA = {
         <div>More courses will be added here in the future.</div>
         <div class="cc-btn">Coming Soon</div>
       </div>`;
-    }
+}
 
-    function renderHomeStats(stats) {
-      const boxes = [
-        ['totalWords', stats.totalWords, 'Total Words'],
-        ['totalCategories', stats.totalCategories, 'Categories'],
-        ['patternCount', stats.patternCount, 'Sentence Patterns']
-      ];
-      return boxes.map(([id, val, label]) =>
-        `<div class="stat-box fade-in-up"><div class="stat-num" data-count="${val}">0</div><div class="stat-label">${label}</div></div>`
-      ).join('');
-    }
+function renderHomeStats(stats) {
+  const boxes = [
+    ['totalWords', stats.totalWords, 'Total Words'],
+    ['totalCategories', stats.totalCategories, 'Categories'],
+    ['patternCount', stats.patternCount, 'Sentence Patterns']
+  ];
+  return boxes.map(([id, val, label]) =>
+    `<div class="stat-box fade-in-up"><div class="stat-num" data-count="${val}">0</div><div class="stat-label">${label}</div></div>`
+  ).join('');
+}
 
-    const HERO_PHRASES = [
-      { zh: '你好!', py: '(nǐ hǎo)' },
-      { zh: '谢谢!', py: '(xièxiè)' },
-      { zh: '再见!', py: '(zàijiàn)' },
-      { zh: '没问题!', py: '(méi wèntí)' },
-      { zh: '太棒了!', py: '(tài bàng le)' }
-    ];
-    let heroBubbleTimer = null;
-    function setupHeroBubbles() {
-      const box = document.getElementById('heroBubbles');
-      if (!box) return;
-      if (heroBubbleTimer) clearInterval(heroBubbleTimer);
-      let idx = 0;
-      function show() {
-        const p = HERO_PHRASES[idx % HERO_PHRASES.length];
-        box.innerHTML = `<div class="hero-bubble zh">${p.zh} <span style="font-size:12px; opacity:.7;">${p.py}</span></div>`;
-        requestAnimationFrame(() => box.querySelector('.hero-bubble').classList.add('show'));
-        idx++;
-      }
-      show();
-      heroBubbleTimer = setInterval(show, 2800);
-    }
+const HERO_PHRASES = [
+  { zh: '你好!', py: '(nǐ hǎo)' },
+  { zh: '谢谢!', py: '(xièxiè)' },
+  { zh: '再见!', py: '(zàijiàn)' },
+  { zh: '没问题!', py: '(méi wèntí)' },
+  { zh: '太棒了!', py: '(tài bàng le)' }
+];
+let heroBubbleTimer = null;
+function setupHeroBubbles() {
+  const box = document.getElementById('heroBubbles');
+  if (!box) return;
+  if (heroBubbleTimer) clearInterval(heroBubbleTimer);
+  let idx = 0;
+  function show() {
+    const p = HERO_PHRASES[idx % HERO_PHRASES.length];
+    box.innerHTML = `<div class="hero-bubble zh">${p.zh} <span style="font-size:12px; opacity:.7;">${p.py}</span></div>`;
+    requestAnimationFrame(() => box.querySelector('.hero-bubble').classList.add('show'));
+    idx++;
+  }
+  show();
+  heroBubbleTimer = setInterval(show, 2800);
+}
 
-    function renderStaticPages() {
-      const stats = getSiteStats();
-      document.getElementById('homeCourseGrid').innerHTML = renderCourseCard(stats);
-      document.getElementById('coursesPageGrid').innerHTML = renderCourseCard(stats);
-      document.getElementById('footerYear').textContent = new Date().getFullYear();
-      wireNavTargets();
-      setupScrollFadeIn();
-      setupHeroBubbles();
-    }
+function renderStaticPages() {
+  const stats = getSiteStats();
+  document.getElementById('homeCourseGrid').innerHTML = renderCourseCard(stats);
+  document.getElementById('coursesPageGrid').innerHTML = renderCourseCard(stats);
+  document.getElementById('footerYear').textContent = new Date().getFullYear();
+  wireNavTargets();
+  setupScrollFadeIn();
+  setupHeroBubbles();
+}
 
-    function wireNavTargets() {
-      document.querySelectorAll('[data-nav]').forEach(el => {
-        el.onclick = (e) => {
-          e.preventDefault();
-          navigateTo(el.dataset.nav);
-        };
-      });
-    }
-
-    let countersAnimated = false;
-    function setupScrollFadeIn() {
-      const els = document.querySelectorAll('.fade-in-up');
-      if (!('IntersectionObserver' in window)) { els.forEach(el => el.classList.add('visible')); return; }
-      const obs = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('visible');
-            if (entry.target.classList.contains('stat-box') && !countersAnimated) {
-              const numEl = entry.target.querySelector('[data-count]');
-              if (numEl) animateCounter(numEl, parseInt(numEl.dataset.count), 900);
-            }
-          }
-        });
-      }, { threshold: 0.2 });
-      els.forEach(el => obs.observe(el));
-      countersAnimated = true;
-    }
-
-    function navigateTo(page) {
-      ['pageHome', 'pageAbout', 'pageCourses', 'pageApp'].forEach(id => {
-        document.getElementById(id).style.display = 'none';
-      });
-      document.getElementById('page' + page.charAt(0).toUpperCase() + page.slice(1)).style.display = 'block';
-      document.querySelectorAll('.site-nav-link').forEach(l => l.classList.remove('active'));
-      document.querySelectorAll(`.site-nav-link[data-nav="${page}"]`).forEach(l => l.classList.add('active'));
-      document.getElementById('siteNavLinks').classList.remove('open');
-      window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
-      if (page === 'home' || page === 'courses' || page === 'about') setTimeout(setupScrollFadeIn, 50);
-    }
-
-    document.getElementById('siteHamburger').onclick = () => {
-      document.getElementById('siteNavLinks').classList.toggle('open');
+function wireNavTargets() {
+  document.querySelectorAll('[data-nav]').forEach(el => {
+    el.onclick = (e) => {
+      e.preventDefault();
+      navigateTo(el.dataset.nav);
     };
+  });
+}
 
-    (async function init() {
-      await loadPrefs();
-      updateSearchPlaceholder(document.documentElement.getAttribute('data-lang'));
-      checkMobile();
-      renderSidebar();
-      renderCards();
-      renderStaticPages();
-      navigateTo('home');
-    })();
+let countersAnimated = false;
+function setupScrollFadeIn() {
+  const els = document.querySelectorAll('.fade-in-up');
+  if (!('IntersectionObserver' in window)) { els.forEach(el => el.classList.add('visible')); return; }
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        if (entry.target.classList.contains('stat-box') && !countersAnimated) {
+          const numEl = entry.target.querySelector('[data-count]');
+          if (numEl) animateCounter(numEl, parseInt(numEl.dataset.count), 900);
+        }
+      }
+    });
+  }, { threshold: 0.2 });
+  els.forEach(el => obs.observe(el));
+  countersAnimated = true;
+}
+
+function navigateTo(page) {
+  ['pageHome', 'pageAbout', 'pageCourses', 'pageApp'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('page' + page.charAt(0).toUpperCase() + page.slice(1)).style.display = 'block';
+  document.querySelectorAll('.site-nav-link').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll(`.site-nav-link[data-nav="${page}"]`).forEach(l => l.classList.add('active'));
+  document.getElementById('siteNavLinks').classList.remove('open');
+  window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+  if (page === 'home' || page === 'courses' || page === 'about') setTimeout(setupScrollFadeIn, 50);
+}
+
+document.getElementById('siteHamburger').onclick = () => {
+  document.getElementById('siteNavLinks').classList.toggle('open');
+};
+
+(async function init() {
+  await loadPrefs();
+  updateSearchPlaceholder(document.documentElement.getAttribute('data-lang'));
+  checkMobile();
+  renderSidebar();
+  renderCards();
+  renderStaticPages();
+  navigateTo('home');
+})();
