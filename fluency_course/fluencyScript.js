@@ -85006,32 +85006,189 @@ let bookmarkFilterActive = false;
 let currentSubtopicFilter = 'all';
 let openSections = new Set(); // sections default COLLAPSED; membership here means user opened it
 
-/* ================= STORAGE (persistent, no localStorage) ================= */
-async function loadPrefs() {
-  try {
-    const theme = await window.storage.get('pref:theme');
-    if (theme) document.body.setAttribute('data-theme', theme.value);
-  } catch (e) { }
-  try {
-    const lang = await window.storage.get('pref:lang');
-    if (lang) document.documentElement.setAttribute('data-lang', lang.value);
-  } catch (e) { }
-  try {
-    const bm = await window.storage.get('bookmarks');
-    if (bm) bookmarks = JSON.parse(bm.value);
-  } catch (e) { bookmarks = {}; }
-  try {
-    const sp = await window.storage.get('pref:speed');
-    if (sp && SPEED_RATES[sp.value]) {
-      audioSpeed = sp.value;
-      document.querySelectorAll('.speed-btn').forEach(b => b.classList.toggle('active', b.dataset.speed === audioSpeed));
-    }
-  } catch (e) { }
-}
-async function saveTheme(v) { try { await window.storage.set('pref:theme', v); } catch (e) { } }
-async function saveLang(v) { try { await window.storage.set('pref:lang', v); } catch (e) { } }
-async function saveBookmarks() { try { await window.storage.set('bookmarks', JSON.stringify(bookmarks)); } catch (e) { } }
+/* =========================================================
+   STORAGE
+   Persistent browser storage
+   Saves:
+   1. Theme
+   2. Language
+   3. Bookmarks
+   ========================================================= */
 
+async function loadPrefs() {
+
+  /* ================= THEME ================= */
+
+  try {
+
+    const savedTheme =
+      localStorage.getItem('pref:theme');
+
+    if (savedTheme) {
+
+      document.body.setAttribute(
+        'data-theme',
+        savedTheme
+      );
+
+    }
+
+  } catch (e) {
+
+    console.warn(
+      'Failed to load theme:',
+      e
+    );
+
+  }
+
+
+  /* ================= LANGUAGE ================= */
+
+  try {
+
+    const savedLanguage =
+      localStorage.getItem('pref:lang');
+
+    if (savedLanguage) {
+
+      document.documentElement.setAttribute(
+        'data-lang',
+        savedLanguage
+      );
+
+    }
+
+  } catch (e) {
+
+    console.warn(
+      'Failed to load language:',
+      e
+    );
+
+  }
+
+
+  /* ================= BOOKMARKS ================= */
+
+  try {
+
+    const savedBookmarks =
+      localStorage.getItem('bookmarks');
+
+    if (savedBookmarks) {
+
+      const parsedBookmarks =
+        JSON.parse(savedBookmarks);
+
+      if (
+        parsedBookmarks &&
+        typeof parsedBookmarks === 'object' &&
+        !Array.isArray(parsedBookmarks)
+      ) {
+
+        bookmarks = parsedBookmarks;
+
+      } else {
+
+        bookmarks = {};
+
+      }
+
+    } else {
+
+      bookmarks = {};
+
+    }
+
+  } catch (e) {
+
+    console.warn(
+      'Failed to load bookmarks:',
+      e
+    );
+
+    bookmarks = {};
+
+  }
+
+}
+
+
+/* =========================================================
+   SAVE THEME
+   ========================================================= */
+
+async function saveTheme(value) {
+
+  try {
+
+    localStorage.setItem(
+      'pref:theme',
+      value
+    );
+
+  } catch (e) {
+
+    console.error(
+      'Failed to save theme:',
+      e
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SAVE LANGUAGE
+   ========================================================= */
+
+async function saveLang(value) {
+
+  try {
+
+    localStorage.setItem(
+      'pref:lang',
+      value
+    );
+
+  } catch (e) {
+
+    console.error(
+      'Failed to save language:',
+      e
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   SAVE BOOKMARKS
+   ========================================================= */
+
+async function saveBookmarks() {
+
+  try {
+
+    localStorage.setItem(
+      'bookmarks',
+      JSON.stringify(bookmarks)
+    );
+
+  } catch (e) {
+
+    console.error(
+      'Failed to save bookmarks:',
+      e
+    );
+
+  }
+
+}
+// ==========================================================================================================
 /* ================= TONE COLOR ================= */
 function toneColorPinyin(py) {
   const map = {
