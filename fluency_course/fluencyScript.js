@@ -86499,7 +86499,7 @@ function animateCounter(el, target, duration) {
 function renderCourseCard(stats) {
   return `<div class="course-card fade-in-up">
         <span class="cc-badge live">✅ LIVE</span>
-        <h3 class="zh">流利中文</h3>
+        <h3 class="zh">Nihao Chinese (你好中文)</h3>
         <div>Fluent Spoken Chinese</div>
         <div class="cc-stats">
           📊 Total words: <strong>${stats.totalWords.toLocaleString()}</strong><br>
